@@ -1,12 +1,15 @@
-name: High CPU Alert
-trigger:
-  alertname: High CPU Usage
+# Playbook Name
+name: "High CPU Alert Playbook"
 
+# List of automated actions for the bot to execute
 actions:
-  - type: fetch_metrics
+  - type: "fetch_metrics"
     target: "cpu_usage"
-  - type: capture_screenshot
-    dashboard_id: "your_dashboard_uid"
-  - type: ai_analysis
-  - type: send_email
-    to: "dinbaranes@icloud.com"
+    description: "Retrieve real-time CPU data from Grafana API"
+
+  - type: "ai_analysis"
+    instruction: "Analyze why the CPU is high and provide a solution in Hebrew"
+
+  - type: "send_notification"
+    channel: "email"
+    recipient: "admin"
