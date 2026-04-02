@@ -4,7 +4,6 @@ import yaml
 import base64
 import google.generativeai as genai
 from fastapi import FastAPI, Request, BackgroundTasks
-from fastapi.responses import JSONResponse
 from dotenv import load_dotenv
 import smtplib
 from email.mime.text import MIMEText
@@ -27,13 +26,15 @@ GITHUB_REPO = os.getenv("GITHUB_REPO")
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 EMAIL_SENDER = os.getenv("EMAIL_SENDER")
 EMAIL_PASSWORD = os.getenv("EMAIL_PASSWORD")
+EMAIL_HOST = os.getenv("EMAIL_HOST", "smtp.gmail.com")
+EMAIL_PORT = int(os.getenv("EMAIL_PORT", 587))
 GRAFANA_URL = os.getenv("GRAFANA_URL")
 GRAFANA_USERNAME = os.getenv("GRAFANA_USERNAME")
 GRAFANA_TOKEN = os.getenv("GRAFANA_TOKEN")
 GRAFANA_DASHBOARD_URL = os.getenv("GRAFANA_DASHBOARD_URL")
 
 # Check required environment variables to prevent crashes
-missing_envs = [name for name in ["GITHUB_TOKEN", "GITHUB_REPO", "GEMINI_API_KEY", "EMAIL_SENDER", "EMAIL_PASSWORD", "GRAFANA_TOKEN"] if not os.getenv(name)]
+missing_envs = [name for name in ["GITHUB_TOKEN", "GITHUB_REPO", "GEMINI_API_KEY", "EMAIL_SENDER", "EMAIL_PASSWORD", "GRAFANA_TOKEN", "GRAFANA_URL"] if not os.getenv(name)]
 if missing_envs:
     print(f"⚠️ WARNING: The following essential environment variables are missing: {', '.join(missing_envs)}")
 
@@ -56,7 +57,9 @@ def fetch_grafana_metric(target_name, query):
     if not auth:
         headers["Authorization"] = f"Bearer {GRAFANA_TOKEN}"
         
-    api_url = "https://prometheus-prod-58-prod-eu-central-0.grafana.net/api/prom/api/v1/query"
+    # Dynamically build Prometheus API URL from environment variable
+    base_url = GRAFANA_URL.rstrip('/') if GRAFANA_URL else "https://prometheus-prod-58-prod-eu-central-0.grafana.net"
+    api_url = f"{base_url}/api/prom/api/v1/query"
     
     try:
         print(f"🔍 Fetching live data for: {target_name} with query: {query[:50]}...")
@@ -147,7 +150,7 @@ def send_email_report(subject, content, attachment_path=None):
             )
             msg.attach(part)
         
-        server = smtplib.SMTP('smtp.gmail.com', 587)
+        server = smtplib.SMTP(EMAIL_HOST, EMAIL_PORT)
         server.starttls()
         server.login(EMAIL_SENDER, EMAIL_PASSWORD)
         server.send_message(msg)
