@@ -13,6 +13,8 @@ from playwright.sync_api import sync_playwright
 import time
 from email.mime.base import MIMEBase
 from email import encoders
+import PIL.Image
+import re
 
 # Initialize Environment Variables
 load_dotenv()
@@ -30,13 +32,18 @@ GRAFANA_USERNAME = os.getenv("GRAFANA_USERNAME")
 GRAFANA_TOKEN = os.getenv("GRAFANA_TOKEN")
 GRAFANA_DASHBOARD_URL = os.getenv("GRAFANA_DASHBOARD_URL")
 
+# Check required environment variables to prevent crashes
+missing_envs = [name for name in ["GITHUB_TOKEN", "GITHUB_REPO", "GEMINI_API_KEY", "EMAIL_SENDER", "EMAIL_PASSWORD", "GRAFANA_TOKEN"] if not os.getenv(name)]
+if missing_envs:
+    print(f"⚠️ WARNING: The following essential environment variables are missing: {', '.join(missing_envs)}")
+
 # --- AI Setup ---
 genai.configure(api_key=GEMINI_API_KEY, transport='rest')
 ai_model = genai.GenerativeModel('models/gemini-2.5-flash')
 
 # --- Helper Functions ---
 
-def fetch_grafana_metric(target_metric):
+def fetch_grafana_metric(target_name, query):
     """Fetch live data from Grafana Cloud Prometheus API."""
     headers = {
         "Content-Type": "application/json"
@@ -50,10 +57,9 @@ def fetch_grafana_metric(target_metric):
         headers["Authorization"] = f"Bearer {GRAFANA_TOKEN}"
         
     api_url = "https://prometheus-prod-58-prod-eu-central-0.grafana.net/api/prom/api/v1/query"
-    query = "100 - (avg(rate(node_cpu_seconds_total{mode='idle'}[5m])) * 100)"
     
     try:
-        print(f"🔍 Fetching live data for: {target_metric}")
+        print(f"🔍 Fetching live data for: {target_name} with query: {query[:50]}...")
         response = requests.get(
             api_url,
             headers=headers,
@@ -89,19 +95,37 @@ def load_playbook(alert_name):
         print(f"❌ GitHub Error: {e}")
         return None
 
-def get_ai_analysis(alert_name, context):
-    """Use Gemini AI to generate troubleshooting steps."""
+def get_ai_analysis(alert_name, context, screenshot_path=None):
+    """Use Gemini AI to generate troubleshooting steps based on text and visual dashboard data."""
+    
+    # Generic and flexible prompt for any dashboard layout
     prompt = (
-        f"Incident: {alert_name}.\n"
-        f"Context: {context}.\n"
-        f"Provide 3 professional troubleshooting steps based on this data."
+        f"You are an expert Site Reliability Engineer (SRE).\n"
+        f"Analyze the following incident using the provided context and the attached dashboard screenshot.\n\n"
+        f"SYSTEM ALERT: {alert_name}\n"
+        f"CONTEXT: {context}\n\n"
+        "INSTRUCTIONS:\n"
+        "1. Visual Inspection: Scan the screenshot for anomalies (RED/ORANGE panels or extreme spikes).\n"
+        "2. Identification: Identify titles of problematic panels directly from the image text.\n"
+        "3. Correlation: Determine if visual evidence confirms the alert or suggests a different root cause.\n"
+        "4. Action Plan: Provide 3 professional troubleshooting steps based on this combined analysis."
     )
+    
     try:
-        response = ai_model.generate_content(prompt)
+        # If a screenshot exists, perform multi-modal analysis (Vision + Text)
+        if screenshot_path and os.path.exists(screenshot_path):
+            img = PIL.Image.open(screenshot_path)
+            response = ai_model.generate_content([prompt, img])
+        else:
+            # Fallback to text-only analysis if no image is available
+            response = ai_model.generate_content(prompt)
+            
         return response.text if response else "AI Analysis Failed."
-    except:
-        return "AI Service Unavailable."
+    except Exception as e:
+        print(f"❌ AI Error: {e}")
+        return "AI Service Unavailable or Visual Analysis Failed."
 
+        
 def send_email_report(subject, content, attachment_path=None):
     """Send the final report via SMTP."""
     try:
@@ -134,7 +158,6 @@ def send_email_report(subject, content, attachment_path=None):
 
 def capture_dashboard(url, output_path="dashboard.png"):
     """Capture a screenshot of the Grafana dashboard."""
-    print(f"📷 Capturing dashboard snapshot: {url}")
     try:
         with sync_playwright() as p:
             browser = p.chromium.launch(headless=True)
@@ -154,61 +177,118 @@ def capture_dashboard(url, output_path="dashboard.png"):
 # --- Core Logic ---
 
 def process_incident(data):
+    """
+    Core Logic: Automated Incident Triage & Enrichment.
+    This function acts as a 'First Responder' by:
+    1. Identifying the alert and fetching its specific Playbook from GitHub.
+    2. Executing declarative actions (Metrics, Screenshots, AI Analysis).
+    3. Delivering a comprehensive report with visual evidence to the SRE team.
+    """
     if "alerts" not in data:
-        send_email_report("BOT TEST", "Responder Bot is Online.")
+        send_email_report("BOT TEST", "Responder Bot is Online and listening to Webhooks.")
         return
 
     for alert in data["alerts"]:
-        if alert.get("status") == "resolved": continue
+        # Skip resolved alerts to focus only on active incidents
+        if alert.get("status") == "resolved": 
+            continue
             
         alert_name = alert.get("labels", {}).get("alertname", "Unknown")
         summary = alert.get("annotations", {}).get("summary", "No details provided.")
 
-        print(f"\n--- Handling Alert: {alert_name} ---")
+        print(f"\n--- [Handling Alert] {alert_name} ---")
+        
+        # --- Step 1: Load Declarative Playbook from GitHub ---
         playbook = load_playbook(alert_name)
         
+        # Variables to store enriched data through the execution flow
         enriched_data = f"Initial Summary: {summary}\n"
         execution_steps = ""
-        ai_output = ""
+        ai_output = "No AI analysis performed."
         screenshot_path = None
 
-        if GRAFANA_DASHBOARD_URL:
-            screenshot_path = capture_dashboard(GRAFANA_DASHBOARD_URL, f"snapshot_{alert_name.replace(' ', '_')}.png")
-            if screenshot_path:
-                execution_steps += "✅ Dashboard Capture: Screenshot saved successfully.\n"
-
         if playbook and "actions" in playbook:
-            print(f"📖 Executing Playbook: {playbook.get('name')}")
+            print(f"📖 Playbook Found: {playbook.get('name')}. Executing defined actions...")
             
             for action in playbook["actions"]:
                 action_type = action.get("type")
                 
-                if action_type == "fetch_metrics":
-                    target = action.get("target", "cpu")
-                    metric_val = fetch_grafana_metric(target)
+                # --- ACTION: Capture Dashboard Screenshot ---
+                # Requirement: Automated visual context for RCA.
+                # Prioritizes the 'url' field in the YAML for incident-specific dashboards.
+                if action_type == "capture_dashboard_screenshot":
+                    # FALLBACK: If YAML doesn't specify a URL, use the default from .env
+                    target_url = action.get("url") or GRAFANA_DASHBOARD_URL
+                    
+                    if target_url:
+                        print(f"📸 [Action] Capturing Dashboard: {target_url}")
+                        # We use the alert name in the filename to prevent overwriting during concurrent alerts
+                        safe_alert_name = re.sub(r'[^a-zA-Z0-9_]', '_', alert_name)
+                        unique_filename = f"snapshot_{safe_alert_name}.png"
+                        screenshot_path = capture_dashboard(target_url, unique_filename)
+                        
+                        if screenshot_path:
+                            execution_steps += f"✅ Visual Evidence: Dashboard captured from {target_url}\n"
+                        else:
+                            execution_steps += "❌ Visual Evidence: Failed to capture dashboard.\n"
+
+                # --- ACTION: Fetch Live Metrics ---
+                # Requirement: Enrich alert with real-time data points from Prometheus.
+                elif action_type == "fetch_metrics":
+                    target = action.get("target", "unknown metric")
+                    # Support pulling exact PromQL query from YAML
+                    prom_query = action.get("query")
+                    
+                    if not prom_query:
+                        # Heuristics based on target name, or default to using target as query
+                        if "cpu" in target.lower():
+                            prom_query = "100 - (avg(rate(node_cpu_seconds_total{mode='idle'}[5m])) * 100)"
+                        elif "memory" in target.lower():
+                            prom_query = "100 * (1 - ((avg_over_time(node_memory_MemFree_bytes[5m]) + avg_over_time(node_memory_Cached_bytes[5m]) + avg_over_time(node_memory_Buffers_bytes[5m])) / avg_over_time(node_memory_MemTotal_bytes[5m])))"
+                        else:
+                            prom_query = target  # Use the target as the direct raw query as a last resort
+                            
+                    metric_val = fetch_grafana_metric(target, prom_query)
                     enriched_data += f"- [LIVE METRIC] {target}: {metric_val}\n"
-                    execution_steps += f"✅ Data Fetch: {target} retrieval successful.\n"
+                    execution_steps += f"✅ Data Enrichment: {target} metrics retrieved successfully.\n"
 
+                # --- ACTION: AI Root Cause Analysis ---
+                # Requirement: Use LLM to provide first-responder insights.
                 elif action_type == "ai_analysis":
-                    ai_output = get_ai_analysis(alert_name, enriched_data)
-                    execution_steps += "✅ AI Analysis: Root cause identified.\n"
-
+                    print("🤖 [Action] Generating AI Insights with Vision...")
+                    # Pass the unique screenshot path captured in the previous step
+                    ai_output = get_ai_analysis(alert_name, enriched_data, screenshot_path)
+                    execution_steps += "✅ AI Insights: Visual and textual analysis successfully integrated.\n"
+                # --- ACTION: Send Notification ---
+                # Requirement: Output report to the dedicated mailing list.
                 elif action_type == "send_notification":
-                    report = (
+                    report_body = (
                         f"INCIDENT REPORT: {alert_name}\n"
-                        f"{'='*30}\n"
-                        f"SUMMARY: {summary}\n\n"
-                        f"EXECUTION LOG:\n{execution_steps}\n"
-                        f"LIVE CONTEXT:\n{enriched_data}\n"
-                        f"AI RECOMMENDATIONS:\n{ai_output}\n"
-                        f"{'='*30}"
+                        f"{'='*40}\n"
+                        f"CRITICAL SUMMARY:\n{summary}\n\n"
+                        f"AUTOMATED EXECUTION LOG:\n{execution_steps}\n"
+                        f"LIVE SYSTEM CONTEXT:\n{enriched_data}\n"
+                        f"AI RECOMMENDATIONS & RCA:\n{ai_output}\n"
+                        f"{'='*40}\n"
+                        f"Status: This report was generated automatically by the AI-Responder Bot."
                     )
-                    send_email_report(f"CRITICAL ALERT: {alert_name}", report, attachment_path=screenshot_path)
-                    execution_steps += "✅ Notification: Report delivered.\n"
+                    
+                    # Sending email with the screenshot attachment (if captured)
+                    subject = f"🚨 [CRITICAL] {alert_name} - Automated RCA Report"
+                    send_email_report(subject, report_body, attachment_path=screenshot_path)
+                    execution_steps += "✅ Notification: RCA report dispatched via SMTP.\n"
+                    print(f"✉️ [Done] Report sent for {alert_name}")
+
         else:
-            # Fallback
-            ai_output = get_ai_analysis(alert_name, summary)
-            send_email_report(f"ALERT: {alert_name}", f"AI Insight: {ai_output}", attachment_path=screenshot_path)
+            # Fallback Logic: If no specific YAML playbook is defined
+            print(f"⚠️ No declarative playbook found for '{alert_name}'. Running generic triage (Text Only).")
+            
+            # Pass ONLY the text to the AI for minimal delay; no screenshots for fallback
+            ai_output = get_ai_analysis(alert_name, summary, screenshot_path=None)
+            
+            fallback_subject = f"⚠️ [Alert] {alert_name} (No Playbook Found)"
+            fallback_content = f"AI Insight (Text Analysis): {ai_output}\n\nPlease define a YAML playbook for this alert type if you want screenshots or deeper analysis."
+            send_email_report(fallback_subject, fallback_content, attachment_path=None)
 
 # --- API Routes ---
 
