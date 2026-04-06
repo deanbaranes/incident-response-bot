@@ -7,7 +7,7 @@ name: "High CPU Alert Playbook"
 # List of automated actions for the bot to execute in sequential order
 actions:
   - type: "capture_dashboard_screenshot"
-    url: "https://dinbaranes.grafana.net/alerting/grafana/bfgpfkdpm4v0ge/view"
+    url: "https://dinbaranes.grafana.net/public-dashboards/6b201773936640628436787ab837de09"
     description: "Captures the dashboard for this specific alert"
   # STEP 2: Data Enrichment
   - type: "fetch_metrics"
