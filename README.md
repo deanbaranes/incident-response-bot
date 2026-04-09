@@ -1,4 +1,4 @@
-# 🤖 AI-Powered Incident Responder (DevOps Bot)
+# 🤖 AI-Powered Incident Responder 
 
 An automated Incident Response system that connects **Grafana Cloud**, **GitHub API**, and **Google Gemini AI** to handle production alerts dynamically.
 
