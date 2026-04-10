@@ -9,6 +9,7 @@ from config import EMAIL_SENDER, EMAIL_PASSWORD, EMAIL_HOST, EMAIL_PORT
 
 logger = logging.getLogger(__name__)
 
+# Helper function to build and send the final report email
 def send_email_report(subject, content, attachment_path=None):
     """Send incident report via SMTP."""
     try:
@@ -18,6 +19,7 @@ def send_email_report(subject, content, attachment_path=None):
         msg['Subject'] = subject
         msg.attach(MIMEText(content, 'plain'))
         
+        # Check if we have a dashboard screenshot to attach
         if attachment_path and os.path.exists(attachment_path):
             with open(attachment_path, "rb") as attachment:
                 part = MIMEBase("application", "octet-stream")

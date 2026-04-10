@@ -10,6 +10,8 @@ logger = logging.getLogger(__name__)
 genai.configure(api_key=GEMINI_API_KEY, transport='rest')
 ai_model = genai.GenerativeModel('models/gemini-2.5-flash')
 
+# Main function to send the incident details to Gemini
+# It takes the alert context and an optional screenshot if we have one
 def get_ai_analysis(alert_name, context, screenshot_path=None):
     """Analyze incident and generate troubleshooting steps using Gemini."""
     
@@ -25,6 +27,8 @@ def get_ai_analysis(alert_name, context, screenshot_path=None):
         "4. Action Plan: Provide 3 professional troubleshooting steps based on this combined analysis."
     )
     
+    # Try to execute the AI request.
+    # If a screenshot is provided, we send both the image and the text prompt together.
     try:
         if screenshot_path and os.path.exists(screenshot_path):
             img = PIL.Image.open(screenshot_path)

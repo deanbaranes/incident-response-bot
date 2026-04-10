@@ -6,6 +6,8 @@ from config import GRAFANA_URL, GRAFANA_USERNAME, GRAFANA_TOKEN
 
 logger = logging.getLogger(__name__)
 
+# Fetches raw metric numbers from Prometheus based on a custom query
+# This provides the AI and the final report with live data context
 def fetch_grafana_metric(target_name, query):
     """Fetch live data from Prometheus API."""
     headers = {
@@ -40,6 +42,7 @@ def fetch_grafana_metric(target_name, query):
     except Exception as e:
         return f"Connection Failed: {str(e)}"
 
+# Opens a headless browser to snap a picture of the Grafana dashboard
 def capture_dashboard(url, output_path="dashboard.png"):
     """Capture a screenshot of the dashboard."""
     try:

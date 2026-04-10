@@ -6,6 +6,8 @@ from config import GITHUB_REPO, GITHUB_TOKEN
 
 logger = logging.getLogger(__name__)
 
+# Fetches the specific playbook YAML file for the given alert from our repository
+# We use this to know exactly what actions to run for each incident
 def load_playbook(alert_name):
     """Download playbook from GitHub repository."""
     file_name = alert_name.replace(' ', '_').lower()
