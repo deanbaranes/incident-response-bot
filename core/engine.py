@@ -1,14 +1,18 @@
 import re
+import logging
 from config import GRAFANA_DASHBOARD_URL
 from services.github import load_playbook
 from services.grafana import capture_dashboard, fetch_grafana_metric
 from services.ai import get_ai_analysis
 from services.email import send_email_report
+from services.email import send_email_report
+
+logger = logging.getLogger(__name__)
 
 def process_incident(data):
     """Process incoming webhook alerts and execute incident response playbooks."""
     if "alerts" not in data:
-        send_email_report("Test Event", "Service is online.")
+        send_email_report("BOT TEST", "Responder Bot is Online and listening to Webhooks.")
         return
 
     for alert in data["alerts"]:
@@ -18,7 +22,7 @@ def process_incident(data):
         alert_name = alert.get("labels", {}).get("alertname", "Unknown")
         summary = alert.get("annotations", {}).get("summary", "No details provided.")
 
-        print(f"Processing alert: {alert_name}")
+        logger.info(f"Processing alert: {alert_name}")
         
         playbook = load_playbook(alert_name)
         
@@ -28,7 +32,7 @@ def process_incident(data):
         screenshot_path = None
 
         if playbook and "actions" in playbook:
-            print(f"Found playbook: {playbook.get('name')}")
+            logger.info(f"Found playbook: {playbook.get('name')}")
             
             for action in playbook["actions"]:
                 action_type = action.get("type")
@@ -38,7 +42,7 @@ def process_incident(data):
                     target_url = action.get("url") or GRAFANA_DASHBOARD_URL
                     
                     if target_url:
-                        print(f"Capturing dashboard: {target_url}")
+                        logger.info(f"Capturing dashboard: {target_url}")
                         safe_alert_name = re.sub(r'[^a-zA-Z0-9_]', '_', alert_name)
                         unique_filename = f"snapshot_{safe_alert_name}.png"
                         screenshot_path = capture_dashboard(target_url, unique_filename)
@@ -67,32 +71,32 @@ def process_incident(data):
 
                 # AI Root Cause Analysis
                 elif action_type == "ai_analysis":
-                    print("Running AI analysis...")
+                    logger.info("Running AI analysis...")
                     ai_output = get_ai_analysis(alert_name, enriched_data, screenshot_path)
                     execution_steps += "AI Analysis completed successfully.\n"
 
                 # Send Notification
                 elif action_type == "send_notification":
                     report_body = (
-                        f"Alert: {alert_name}\n"
+                        f"INCIDENT REPORT: {alert_name}\n"
                         f"{'='*40}\n"
-                        f"Summary:\n{summary}\n\n"
-                        f"Execution Log:\n{execution_steps}\n"
-                        f"Context:\n{enriched_data}\n"
-                        f"AI Root Cause Analysis:\n{ai_output}\n"
+                        f"CRITICAL SUMMARY:\n{summary}\n\n"
+                        f"AUTOMATED EXECUTION LOG:\n{execution_steps}\n"
+                        f"LIVE SYSTEM CONTEXT:\n{enriched_data}\n"
+                        f"AI RECOMMENDATIONS & RCA:\n{ai_output}\n"
                         f"{'='*40}\n"
-                        f"Generated automatically by Incident Responder."
+                        f"Status: This report was generated automatically by the AI-Responder Bot."
                     )
                     
                     subject = f"Incident Report: {alert_name}"
                     send_email_report(subject, report_body, attachment_path=screenshot_path)
                     execution_steps += "Notification: RCA report dispatched.\n"
-                    print(f"Sent email for {alert_name}")
+                    logger.info(f"Sent email for {alert_name}")
 
         else:
-            print(f"No playbook for '{alert_name}'. Using fallback.")
+            logger.warning(f"No playbook for '{alert_name}'. Using fallback.")
             ai_output = get_ai_analysis(alert_name, summary, screenshot_path=None)
             
-            fallback_subject = f"Alert without playbook: {alert_name}"
-            fallback_content = f"AI Analysis:\n{ai_output}\n\n(No playbook defined)"
+            fallback_subject = f"[Alert] {alert_name} (No Playbook Found)"
+            fallback_content = f"AI Insight (Text Analysis): {ai_output}\n\nPlease define a YAML playbook for this alert type if you want screenshots or deeper analysis."
             send_email_report(fallback_subject, fallback_content, attachment_path=None)

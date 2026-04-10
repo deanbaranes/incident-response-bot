@@ -1,7 +1,10 @@
 import requests
 import base64
 import yaml
+import logging
 from config import GITHUB_REPO, GITHUB_TOKEN
+
+logger = logging.getLogger(__name__)
 
 def load_playbook(alert_name):
     """Download playbook from GitHub repository."""
@@ -17,5 +20,5 @@ def load_playbook(alert_name):
             return yaml.safe_load(content)
         return None
     except Exception as e:
-        print(f"GitHub Error: {e}")
+        logger.error(f"GitHub Error: {e}")
         return None

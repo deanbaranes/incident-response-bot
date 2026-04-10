@@ -4,7 +4,10 @@ from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from email.mime.base import MIMEBase
 from email import encoders
+import logging
 from config import EMAIL_SENDER, EMAIL_PASSWORD, EMAIL_HOST, EMAIL_PORT
+
+logger = logging.getLogger(__name__)
 
 def send_email_report(subject, content, attachment_path=None):
     """Send incident report via SMTP."""
@@ -32,6 +35,6 @@ def send_email_report(subject, content, attachment_path=None):
         server.login(EMAIL_SENDER, EMAIL_PASSWORD)
         server.send_message(msg)
         server.quit()
-        print("Email sent successfully.")
+        logger.info("Email sent successfully.")
     except Exception as e:
-        print(f"Email Error: {e}")
+        logger.error(f"Email Error: {e}")

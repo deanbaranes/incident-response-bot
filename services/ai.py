@@ -1,7 +1,10 @@
 import os
 import PIL.Image
 import google.generativeai as genai
+import logging
 from config import GEMINI_API_KEY
+
+logger = logging.getLogger(__name__)
 
 # AI Setup
 genai.configure(api_key=GEMINI_API_KEY, transport='rest')
@@ -31,5 +34,5 @@ def get_ai_analysis(alert_name, context, screenshot_path=None):
             
         return response.text if response else "AI Analysis failed."
     except Exception as e:
-        print(f"AI Error: {e}")
+        logger.error(f"AI Error: {e}")
         return "AI Service unavailable or visual analysis failed."

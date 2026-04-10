@@ -1,7 +1,10 @@
 import requests
 import time
+import logging
 from playwright.sync_api import sync_playwright
 from config import GRAFANA_URL, GRAFANA_USERNAME, GRAFANA_TOKEN
+
+logger = logging.getLogger(__name__)
 
 def fetch_grafana_metric(target_name, query):
     """Fetch live data from Prometheus API."""
@@ -18,7 +21,7 @@ def fetch_grafana_metric(target_name, query):
     api_url = f"{base_url}/api/prom/api/v1/query"
     
     try:
-        print(f"Fetching metric: {target_name}")
+        logger.info(f"Fetching metric: {target_name}")
         response = requests.get(
             api_url,
             headers=headers,
@@ -52,5 +55,5 @@ def capture_dashboard(url, output_path="dashboard.png"):
             browser.close()
             return output_path
     except Exception as e:
-        print(f"Failed to capture screenshot: {e}")
+        logger.error(f"Failed to capture screenshot: {e}")
         return None
