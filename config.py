@@ -20,4 +20,4 @@ GRAFANA_DASHBOARD_URL = os.getenv("GRAFANA_DASHBOARD_URL")
 # Check required environment variables to prevent crashes
 missing_envs = [name for name in ["GITHUB_TOKEN", "GITHUB_REPO", "GEMINI_API_KEY", "EMAIL_SENDER", "EMAIL_PASSWORD", "GRAFANA_TOKEN", "GRAFANA_URL"] if not os.getenv(name)]
 if missing_envs:
-    print(f"⚠️ WARNING: The following essential environment variables are missing: {', '.join(missing_envs)}")
+    print(f"WARNING: The following essential environment variables are missing: {', '.join(missing_envs)}")

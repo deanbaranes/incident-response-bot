@@ -7,7 +7,7 @@ from email import encoders
 from config import EMAIL_SENDER, EMAIL_PASSWORD, EMAIL_HOST, EMAIL_PORT
 
 def send_email_report(subject, content, attachment_path=None):
-    """Send the final report via SMTP."""
+    """Send incident report via SMTP."""
     try:
         msg = MIMEMultipart()
         msg['From'] = EMAIL_SENDER
@@ -32,6 +32,6 @@ def send_email_report(subject, content, attachment_path=None):
         server.login(EMAIL_SENDER, EMAIL_PASSWORD)
         server.send_message(msg)
         server.quit()
-        print(f"✅ Report sent successfully.")
+        print("Email sent successfully.")
     except Exception as e:
-        print(f"❌ Email Error: {e}")
+        print(f"Email Error: {e}")
