@@ -1,10 +1,10 @@
+import os
 import re
 import logging
 from config import GRAFANA_DASHBOARD_URL
 from services.github import load_playbook
 from services.grafana import capture_dashboard, fetch_grafana_metric
 from services.ai import get_ai_analysis
-from services.email import send_email_report
 from services.email import send_email_report
 
 logger = logging.getLogger(__name__)
@@ -87,11 +87,16 @@ def process_incident(data):
                         f"{'='*40}\n"
                         f"Status: This report was generated automatically by the AI-Responder Bot."
                     )
-                    
+
                     subject = f"Incident Report: {alert_name}"
-                    send_email_report(subject, report_body, attachment_path=screenshot_path)
-                    execution_steps += "Notification: RCA report dispatched.\n"
-                    logger.info(f"Sent email for {alert_name}")
+                    try:
+                        send_email_report(subject, report_body, attachment_path=screenshot_path)
+                        execution_steps += "Notification: RCA report dispatched.\n"
+                        logger.info(f"Sent email for {alert_name}")
+                    finally:
+                        if screenshot_path and os.path.exists(screenshot_path):
+                            os.remove(screenshot_path)
+                            logger.info(f"Cleaned up screenshot: {screenshot_path}")
 
         else:
             logger.warning(f"No playbook for '{alert_name}'. Using fallback.")

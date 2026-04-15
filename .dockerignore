@@ -1,0 +1,10 @@
+.git
+.env
+venv/
+__pycache__/
+*.pyc
+*.pyo
+*.png
+.idea/
+.claude/
+review_issues.txt
