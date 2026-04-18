@@ -12,9 +12,8 @@ actions:
 
 # STEP 2: Data Enrichment
   - type: "fetch_metrics"
-    metrics:
-      - target_name: "Overall CPU Usage"
-        query: '100 - (avg by (instance) (irate(windows_cpu_time_total{mode="idle"}[2m])) * 100)'
+    target: "Overall CPU Usage"
+    query: '100 - (avg by (instance) (irate(windows_cpu_time_total{mode="idle"}[2m])) * 100)'
     description: "Retrieve real-time numerical CPU data from Grafana Prometheus API for AI context."
   
   # STEP 3: Root Cause Analysis
