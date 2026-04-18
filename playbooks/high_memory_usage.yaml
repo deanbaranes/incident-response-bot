@@ -1,0 +1,27 @@
+# Playbook Strategy: Visual-First Triage
+# Rationale: Capturing the dashboard immediately to preserve visual evidence (Forensics)
+# before metrics normalize or the dashboard refreshes.
+
+name: "High Memory Usage Playbook"
+
+# List of automated actions for the bot to execute in sequential order
+actions:
+  # STEP 1: Visual Evidence
+  - type: "capture_dashboard_screenshot"
+    description: "Capture dashboard to preserve visual state of memory usage spike."
+
+  # STEP 2: Data Enrichment
+  - type: "fetch_metrics"
+    target: "memory_usage"
+    query: "100 * (1 - ((avg_over_time(node_memory_MemFree_bytes[5m]) + avg_over_time(node_memory_Cached_bytes[5m]) + avg_over_time(node_memory_Buffers_bytes[5m])) / avg_over_time(node_memory_MemTotal_bytes[5m])))"
+    description: "Retrieve real-time memory utilization percentage from Prometheus."
+
+  # STEP 3: Root Cause Analysis
+  - type: "ai_analysis"
+    instruction: "Analyze the memory spike. Identify likely causes (leak, OOM pressure, cache bloat). Recommend immediate mitigation steps and long-term fixes."
+
+  # STEP 4: Final Reporting
+  - type: "send_notification"
+    channel: "email"
+    recipient: "admin"
+    description: "Dispatch the full RCA report including the screenshot to the SRE team."
