@@ -15,12 +15,11 @@ def load_playbook(alert_name):
     headers = {"Authorization": f"token {GITHUB_TOKEN}"}
     
     try:
-        response = requests.get(url, headers=headers)
+        response = requests.get(url, headers=headers, timeout=10)
+        response.raise_for_status()
         print(f"GitHub Request URL: {url}")
-        if response.status_code == 200:
-            content = base64.b64decode(response.json()['content']).decode('utf-8')
-            return yaml.safe_load(content)
-        return None
+        content = base64.b64decode(response.json()['content']).decode('utf-8')
+        return yaml.safe_load(content)
     except Exception as e:
         logger.error(f"GitHub Error: {e}")
         return None

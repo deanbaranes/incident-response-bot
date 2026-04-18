@@ -1,6 +1,8 @@
 import requests
 import time
 import logging
+import math
+import re
 from playwright.sync_api import sync_playwright
 from config import GRAFANA_URL, GRAFANA_USERNAME, GRAFANA_TOKEN
 
@@ -19,26 +21,56 @@ def fetch_grafana_metric(target_name, query):
     if not auth:
         headers["Authorization"] = f"Bearer {GRAFANA_TOKEN}"
         
-    base_url = GRAFANA_URL.rstrip('/') if GRAFANA_URL else "https://prometheus-prod-58-prod-eu-central-0.grafana.net"
+    if not GRAFANA_URL:
+        return "Error: GRAFANA_URL is not configured"
+        
+    base_url = GRAFANA_URL.rstrip('/')
     api_url = f"{base_url}/api/prom/api/v1/query"
     
     try:
         logger.info(f"Fetching metric: {target_name}")
+        
+        # Check 1: Time clipping - block long historical queries (DoS prevention)
+        if re.search(r'\[[0-9]+[yMwd]\]', query):
+            logger.warning(f"BLOCKED: Query for '{target_name}' exceeds maximum allowed time range.")
+            return "Blocked: Time range too large."
+            
+        # Check 2: Sanitize query string to prevent basic injections
+        safe_query = query.replace(";", "").strip()
+        
+        # Check 3: Double Timeout - API aborts at 25s, Python waits 30s to catch the status gracefully
         response = requests.get(
             api_url,
             headers=headers,
             auth=auth,
-            params={"query": query},
-            timeout=10
+            params={"query": safe_query, "timeout": "25s"},
+            timeout=30
         )
+        response.raise_for_status()
         
-        if response.status_code == 200:
-            result = response.json()
-            if result.get("data", {}).get("result"):
-                value = result["data"]["result"][0]["value"][1]
-                return f"{float(value):.1f}%"
+        result = response.json()
+        data_results = result.get("data", {}).get("result", [])
+        
+        # Check 4: Guard Clause - ensure data exists before indexing to avoid IndexError crashes
+        if not data_results:
+            logger.warning(f"Prometheus query returned no data points for '{target_name}'.")
             return "No active data points found."
-        return f"Error: API returned status {response.status_code}"
+            
+        # Check 5: Safely parse numerical values and handle Prometheus NaN/Inf edge cases
+        try:
+            value_str = data_results[0]["value"][1]
+            if str(value_str).lower() == "nan":
+                return "N/A (No numeric data)"
+                
+            val_float = float(value_str)
+            if math.isnan(val_float) or math.isinf(val_float):
+                return "N/A (Invalid numeric metric)"
+                
+            return f"{val_float:.1f}%"
+        except (IndexError, KeyError, TypeError, ValueError):
+            logger.error(f"Malformed data structure received for '{target_name}' from Prometheus.")
+            return "Invalid data format received."
+            
     except Exception as e:
         return f"Connection Failed: {str(e)}"
 
