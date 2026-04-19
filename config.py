@@ -6,6 +6,8 @@ logger = logging.getLogger(__name__)
 
 load_dotenv()
 
+GITHUB_TOKEN = os.getenv("GITHUB_TOKEN")
+GITHUB_REPO = os.getenv("GITHUB_REPO")
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 EMAIL_SENDER = os.getenv("EMAIL_SENDER")
 EMAIL_PASSWORD = os.getenv("EMAIL_PASSWORD")
@@ -22,6 +24,8 @@ EMAIL_RECIPIENTS = [r.strip() for r in os.getenv("EMAIL_RECIPIENTS", "").split("
 WEBHOOK_SECRET = os.getenv("WEBHOOK_SECRET")
 
 _REQUIRED = [
+    "GITHUB_TOKEN",
+    "GITHUB_REPO",
     "GEMINI_API_KEY",
     "EMAIL_SENDER",
     "EMAIL_PASSWORD",
