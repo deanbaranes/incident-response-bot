@@ -1,0 +1,16 @@
+-r requirements.txt
+
+# Testing
+pytest
+pytest-asyncio
+pytest-cov
+
+# Linting & formatting
+ruff
+black
+mypy
+types-requests
+types-PyYAML
+
+# Pre-commit
+pre-commit
