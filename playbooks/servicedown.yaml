@@ -1,0 +1,19 @@
+name: ServiceDown
+instruction: |
+  You are an SRE responding to a service-down alert. Analyze the error rate and
+  uptime metrics, determine if this is a crash, OOM, deployment rollout issue,
+  or dependency failure, and provide immediate recovery steps.
+actions:
+  - type: capture_dashboard_screenshot
+
+  - type: fetch_metrics
+    target: HTTP 5xx Rate
+    query: "sum(rate(http_requests_total{status=~'5..'}[5m]))"
+
+  - type: fetch_metrics
+    target: Service Uptime
+    query: "up{job='your_service'}"
+
+  - type: ai_analysis
+
+  - type: send_notification
