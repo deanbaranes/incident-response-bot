@@ -4,10 +4,8 @@ from dotenv import load_dotenv
 
 logger = logging.getLogger(__name__)
 
-# Initialize Environment Variables
 load_dotenv()
 
-# --- Configuration ---
 GITHUB_TOKEN = os.getenv("GITHUB_TOKEN")
 GITHUB_REPO = os.getenv("GITHUB_REPO")
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
@@ -21,7 +19,23 @@ GRAFANA_TOKEN = os.getenv("GRAFANA_TOKEN")
 GRAFANA_DASHBOARD_URL = os.getenv("GRAFANA_DASHBOARD_URL")
 EMAIL_RECIPIENTS = [r.strip() for r in os.getenv("EMAIL_RECIPIENTS", "").split(",") if r.strip()]
 
-# Check required environment variables to prevent crashes
-missing_envs = [name for name in ["GITHUB_TOKEN", "GITHUB_REPO", "GEMINI_API_KEY", "EMAIL_SENDER", "EMAIL_PASSWORD", "GRAFANA_TOKEN", "GRAFANA_URL"] if not os.getenv(name)]
-if missing_envs:
-    logger.warning(f"The following essential environment variables are missing: {', '.join(missing_envs)}")
+# Optional — when set, webhook requests must carry a matching HMAC-SHA256 signature.
+# Generate with: python -c "import secrets; print(secrets.token_hex(32))"
+WEBHOOK_SECRET = os.getenv("WEBHOOK_SECRET")
+
+_REQUIRED = [
+    "GITHUB_TOKEN",
+    "GITHUB_REPO",
+    "GEMINI_API_KEY",
+    "EMAIL_SENDER",
+    "EMAIL_PASSWORD",
+    "GRAFANA_TOKEN",
+    "GRAFANA_URL",
+]
+
+_missing = [name for name in _REQUIRED if not os.getenv(name)]
+if _missing:
+    raise RuntimeError(
+        f"Missing required environment variables: {', '.join(_missing)}. "
+        "Copy .env.example to .env and fill in the values."
+    )
