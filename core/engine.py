@@ -2,7 +2,7 @@ import os
 import re
 import logging
 from config import GRAFANA_DASHBOARD_URL
-from services.github import load_playbook
+from services.playbooks import load_playbook
 from services.grafana import capture_dashboard, fetch_grafana_metric
 from services.ai import get_ai_analysis
 from services.email import send_email_report

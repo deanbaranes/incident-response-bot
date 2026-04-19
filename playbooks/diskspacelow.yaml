@@ -1,0 +1,17 @@
+name: DiskSpaceLow
+instruction: |
+  You are an SRE responding to a low disk space alert. Identify which mount point
+  is filling up, likely causes (log accumulation, large files, backup overflow),
+  and recommend immediate cleanup steps and monitoring improvements.
+actions:
+  - type: fetch_metrics
+    target: Disk Usage
+    query: "100 - ((node_filesystem_avail_bytes{mountpoint='/'} / node_filesystem_size_bytes{mountpoint='/'}) * 100)"
+
+  - type: fetch_metrics
+    target: Disk Free (GB)
+    query: "node_filesystem_avail_bytes{mountpoint='/'} / 1024 / 1024 / 1024"
+
+  - type: ai_analysis
+
+  - type: send_notification
