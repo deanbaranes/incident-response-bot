@@ -2,7 +2,8 @@ import hmac
 import hashlib
 import logging
 from fastapi import APIRouter, BackgroundTasks, Request, HTTPException
-from pydantic import BaseModel, Field
+from fastapi.exceptions import RequestValidationError
+from pydantic import BaseModel, Field, ValidationError
 from typing import List, Dict, Any, Optional
 from core.engine import process_incident
 from config import WEBHOOK_SECRET
@@ -44,7 +45,10 @@ async def webhook_receiver(request: Request, background_tasks: BackgroundTasks):
         logger.warning("Rejected webhook: invalid or missing signature")
         raise HTTPException(status_code=401, detail="Invalid webhook signature")
 
-    # FastAPI validates payload and returns 422 on malformed/missing alerts
-    payload = WebhookPayload.model_validate_json(body)
+    try:
+        payload = WebhookPayload.model_validate_json(body)
+    except (ValidationError, ValueError) as exc:
+        raise RequestValidationError(errors=exc.errors() if hasattr(exc, "errors") else []) from exc
+
     background_tasks.add_task(process_incident, payload.model_dump())
     return {"status": "processing"}

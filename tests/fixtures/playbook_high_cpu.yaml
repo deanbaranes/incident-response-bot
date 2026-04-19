@@ -1,0 +1,19 @@
+name: High CPU Usage Response
+instruction: >
+  Focus on processes consuming the most CPU. Check for runaway jobs or
+  recent deployments that may have introduced a regression.
+actions:
+  - type: capture_dashboard_screenshot
+    url: https://example.grafana.net/d/abc123/overview
+
+  - type: fetch_metrics
+    target: CPU Usage
+    query: 100 - (avg(rate(node_cpu_seconds_total{mode='idle'}[5m])) * 100)
+
+  - type: fetch_metrics
+    target: Memory Usage
+    query: 100 * (1 - (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes))
+
+  - type: ai_analysis
+
+  - type: send_notification

@@ -1,0 +1,27 @@
+{
+  "alerts": [
+    {
+      "status": "firing",
+      "labels": {
+        "alertname": "HighCPUUsage",
+        "severity": "critical",
+        "instance": "node-01"
+      },
+      "annotations": {
+        "summary": "CPU usage above 90% for 5 minutes",
+        "description": "Node node-01 CPU at 94.2%"
+      }
+    },
+    {
+      "status": "resolved",
+      "labels": {
+        "alertname": "HighCPUUsage",
+        "severity": "critical",
+        "instance": "node-02"
+      },
+      "annotations": {
+        "summary": "CPU usage resolved"
+      }
+    }
+  ]
+}

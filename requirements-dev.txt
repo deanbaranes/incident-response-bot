@@ -1,0 +1,21 @@
+-r requirements.txt
+
+# Testing
+pytest
+pytest-asyncio
+pytest-cov
+pytest-mock
+httpx
+
+# HTTP mocking
+responses
+
+# Linting & formatting
+ruff
+black
+mypy
+types-requests
+types-PyYAML
+
+# Pre-commit
+pre-commit
