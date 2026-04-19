@@ -1,0 +1,80 @@
+name: CI
+
+on:
+  push:
+    branches: [main, "feat/**", "fix/**"]
+  pull_request:
+    branches: [main]
+
+jobs:
+  lint:
+    name: Lint & type check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install dev dependencies
+        run: pip install -r requirements-dev.txt
+
+      - run: ruff check .
+      - run: black --check .
+      - run: mypy .
+
+  test:
+    name: Tests (Python ${{ matrix.python-version }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.11", "3.12"]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: pip
+
+      - name: Install dependencies
+        run: |
+          pip install -r requirements.txt
+          pip install -r requirements-dev.txt
+
+      - name: Install Playwright browsers
+        run: playwright install chromium --with-deps
+
+      - name: Run tests
+        run: pytest tests/ -v --tb=short
+        env:
+          # Provide dummy values so config.py fail-fast doesn't block test runs.
+          # Individual tests mock the services; these are never used for real calls.
+          GITHUB_TOKEN: dummy
+          GITHUB_REPO: dummy/dummy
+          GEMINI_API_KEY: dummy
+          EMAIL_SENDER: test@example.com
+          EMAIL_PASSWORD: dummy
+          GRAFANA_TOKEN: dummy
+          GRAFANA_URL: http://localhost:3000
+
+  docker:
+    name: Docker build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: docker/setup-buildx-action@v3
+
+      - name: Build image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: false
+          tags: incident-response-bot:ci
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
