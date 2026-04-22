@@ -4,7 +4,9 @@ import logging
 
 logger = logging.getLogger(__name__)
 
-PLAYBOOKS_DIR = os.getenv("PLAYBOOKS_DIR", os.path.join(os.path.dirname(__file__), "..", "playbooks"))
+PLAYBOOKS_DIR = os.getenv(
+    "PLAYBOOKS_DIR", os.path.join(os.path.dirname(__file__), "..", "playbooks")
+)
 
 
 def load_playbook(alert_name: str) -> dict | None:
