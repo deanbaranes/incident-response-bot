@@ -19,9 +19,25 @@ GRAFANA_URL = os.getenv("GRAFANA_URL")
 GRAFANA_USERNAME = os.getenv("GRAFANA_USERNAME")
 GRAFANA_TOKEN = os.getenv("GRAFANA_TOKEN")
 GRAFANA_DASHBOARD_URL = os.getenv("GRAFANA_DASHBOARD_URL")
-EMAIL_RECIPIENTS = [r.strip() for r in os.getenv("EMAIL_RECIPIENTS", "").split(",") if r.strip()]
+EMAIL_RECIPIENTS = [
+    r.strip() for r in os.getenv("EMAIL_RECIPIENTS", "").split(",") if r.strip()
+]
 
 # Check required environment variables to prevent crashes
-missing_envs = [name for name in ["GITHUB_TOKEN", "GITHUB_REPO", "GEMINI_API_KEY", "EMAIL_SENDER", "EMAIL_PASSWORD", "GRAFANA_TOKEN", "GRAFANA_URL"] if not os.getenv(name)]
+missing_envs = [
+    name
+    for name in [
+        "GITHUB_TOKEN",
+        "GITHUB_REPO",
+        "GEMINI_API_KEY",
+        "EMAIL_SENDER",
+        "EMAIL_PASSWORD",
+        "GRAFANA_TOKEN",
+        "GRAFANA_URL",
+    ]
+    if not os.getenv(name)
+]
 if missing_envs:
-    logger.warning(f"The following essential environment variables are missing: {', '.join(missing_envs)}")
+    logger.warning(
+        f"The following essential environment variables are missing: {', '.join(missing_envs)}"
+    )

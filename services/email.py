@@ -5,9 +5,16 @@ from email.mime.multipart import MIMEMultipart
 from email.mime.base import MIMEBase
 from email import encoders
 import logging
-from config import EMAIL_SENDER, EMAIL_PASSWORD, EMAIL_HOST, EMAIL_PORT, EMAIL_RECIPIENTS
+from config import (
+    EMAIL_SENDER,
+    EMAIL_PASSWORD,
+    EMAIL_HOST,
+    EMAIL_PORT,
+    EMAIL_RECIPIENTS,
+)
 
 logger = logging.getLogger(__name__)
+
 
 # Helper function to build and send the final report email
 def send_email_report(subject, content, attachment_path=None):
@@ -15,24 +22,24 @@ def send_email_report(subject, content, attachment_path=None):
     try:
         recipients = EMAIL_RECIPIENTS if EMAIL_RECIPIENTS else [EMAIL_SENDER]
         msg = MIMEMultipart()
-        msg['From'] = EMAIL_SENDER
-        msg['To'] = ", ".join(recipients)
-        msg['Subject'] = subject
-        msg.attach(MIMEText(content, 'plain'))
-        
+        msg["From"] = EMAIL_SENDER
+        msg["To"] = ", ".join(recipients)
+        msg["Subject"] = subject
+        msg.attach(MIMEText(content, "plain"))
+
         # Check if we have a dashboard screenshot to attach
         if attachment_path and os.path.exists(attachment_path):
             with open(attachment_path, "rb") as attachment:
                 part = MIMEBase("application", "octet-stream")
                 part.set_payload(attachment.read())
-            
+
             encoders.encode_base64(part)
             part.add_header(
                 "Content-Disposition",
                 f"attachment; filename={os.path.basename(attachment_path)}",
             )
             msg.attach(part)
-        
+
         server = smtplib.SMTP(EMAIL_HOST, EMAIL_PORT)
         server.starttls()
         server.login(EMAIL_SENDER, EMAIL_PASSWORD)

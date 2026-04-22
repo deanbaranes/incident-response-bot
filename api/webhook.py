@@ -5,15 +5,18 @@ from core.engine import process_incident
 
 router = APIRouter()
 
+
 # Schema for an individual alert
 class AlertItem(BaseModel):
     status: Optional[str] = "firing"
     labels: Dict[str, Any] = {}
     annotations: Dict[str, Any] = {}
 
+
 # Schema for the incoming webhook from Prometheus/Grafana
 class WebhookPayload(BaseModel):
     alerts: List[AlertItem] = Field(..., min_length=1)
+
 
 @router.post("/webhook")
 async def webhook_receiver(payload: WebhookPayload, background_tasks: BackgroundTasks):
