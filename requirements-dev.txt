@@ -4,6 +4,7 @@
 pytest
 pytest-asyncio
 pytest-cov
+httpx
 
 # Linting & formatting
 ruff
