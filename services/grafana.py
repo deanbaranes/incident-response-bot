@@ -1,5 +1,4 @@
 import requests
-import time
 import logging
 import math
 import re
@@ -88,8 +87,7 @@ def capture_dashboard(url, output_path="dashboard.png"):
             browser = p.chromium.launch(headless=True)
             context = browser.new_context(viewport={"width": 1920, "height": 1080})
             page = context.new_page()
-            page.goto(url, wait_until="networkidle")
-            time.sleep(10)
+            page.goto(url, wait_until="networkidle", timeout=30000)
             page.screenshot(path=output_path)
             browser.close()
             return output_path

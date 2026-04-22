@@ -2,7 +2,7 @@ import os
 import re
 import logging
 from config import GRAFANA_DASHBOARD_URL
-from services.github import load_playbook
+from services.playbooks import load_playbook
 from services.grafana import capture_dashboard, fetch_grafana_metric
 from services.ai import get_ai_analysis
 from services.email import send_email_report
@@ -33,6 +33,7 @@ def process_incident(data):
         execution_steps = ""
         ai_output = "No AI analysis performed."
         screenshot_path = None
+        playbook_instruction = playbook.get("instruction") if playbook else None
 
         if playbook and "actions" in playbook:
             logger.info(f"Found playbook: {playbook.get('name')}")
@@ -78,7 +79,10 @@ def process_incident(data):
                 elif action_type == "ai_analysis":
                     logger.info("Running AI analysis...")
                     ai_output = get_ai_analysis(
-                        alert_name, enriched_data, screenshot_path
+                        alert_name,
+                        enriched_data,
+                        screenshot_path,
+                        instruction=playbook_instruction,
                     )
                     execution_steps += "AI Analysis completed successfully.\n"
 

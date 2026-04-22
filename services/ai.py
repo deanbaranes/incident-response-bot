@@ -12,15 +12,19 @@ ai_model = genai.GenerativeModel("models/gemini-2.5-flash")
 
 
 # Main function to send the incident details to Gemini
-# It takes the alert context and an optional screenshot if we have one
-def get_ai_analysis(alert_name, context, screenshot_path=None):
+# It takes the alert context, an optional screenshot, and optional playbook instructions.
+def get_ai_analysis(alert_name, context, screenshot_path=None, instruction=None):
     """Analyze incident and generate troubleshooting steps using Gemini."""
+
+    # Add playbook instructions to prompt if available
+    extra = f"\nPLAYBOOK INSTRUCTION:\n{instruction}\n" if instruction else ""
 
     prompt = (
         f"You are a Site Reliability Engineer (SRE).\n"
-        f"Analyze the following incident using the provided context and the attached dashboard screenshot.\n\n"
+        f"Analyze the following incident using the provided context and the attached dashboard screenshot.\n"
+        f"{extra}\n"
         f"SYSTEM ALERT: {alert_name}\n"
-        f"CONTEXT: {context}\n\n"
+        f"CONTEXT:\n{context}\n\n"
         "INSTRUCTIONS:\n"
         "1. Visual Inspection: Scan the screenshot for anomalies (RED/ORANGE panels or extreme spikes).\n"
         "2. Identification: Identify titles of problematic panels directly from the image text.\n"
