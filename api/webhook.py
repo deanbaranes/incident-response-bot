@@ -49,6 +49,11 @@ async def webhook_receiver(request: Request, background_tasks: BackgroundTasks):
         raise HTTPException(status_code=401, detail="Invalid webhook signature")
 
     # FastAPI validates payload and returns 422 on error
-    payload = WebhookPayload.model_validate_json(body)
+    try:
+        payload = WebhookPayload.model_validate_json(body)
+    except Exception:
+        logger.warning("Rejected webhook: malformed JSON or missing required fields")
+        raise HTTPException(status_code=422, detail="Unprocessable Entity")
+
     background_tasks.add_task(process_incident, payload.model_dump())
     return {"status": "processing"}
