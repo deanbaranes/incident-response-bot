@@ -8,7 +8,7 @@ Grafana alert → webhook → fetch metrics + screenshot → Gemini AI RCA → e
 
 ## Features
 
-- **Playbook-as-code** — YAML files in GitHub drive what happens per alert (metrics to pull, dashboard to screenshot, who to notify)
+- **Playbook-as-code** — YAML files in the local `playbooks/` directory drive what happens per alert (metrics to pull, dashboard to screenshot, who to notify)
 - **Live metric enrichment** — queries Prometheus directly so the report reflects the moment of the alert, not stale averages
 - **Visual context** — headless Playwright captures a Grafana dashboard screenshot and attaches it to the report
 - **AI root cause analysis** — Google Gemini analyzes metrics + screenshot and outputs 3 actionable troubleshooting steps
@@ -80,8 +80,6 @@ All configuration is via environment variables. Copy [`.env.example`](.env.examp
 | Variable | Required | Default | Description |
 |---|---|---|---|
 | `WEBHOOK_SECRET` | No | — | HMAC-SHA256 secret shared with Grafana. Strongly recommended in production. |
-| `GITHUB_TOKEN` | **Yes** | — | GitHub PAT with repo read access (playbook store) |
-| `GITHUB_REPO` | **Yes** | — | `owner/repo` containing playbook YAML files |
 | `GEMINI_API_KEY` | **Yes** | — | Google AI Studio API key |
 | `EMAIL_SENDER` | **Yes** | — | Gmail address used to send reports |
 | `EMAIL_PASSWORD` | **Yes** | — | Gmail app password |
@@ -95,10 +93,10 @@ All configuration is via environment variables. Copy [`.env.example`](.env.examp
 
 ## Playbooks
 
-Playbooks are YAML files stored in your GitHub repo. The bot loads `{alertname}.yaml` (case-sensitive) when an alert fires.
+Playbooks are YAML files stored in the local `playbooks/` directory. The bot loads `{alertname}.yaml` (converted to lowercase, spaces replaced by underscores) when an alert fires.
 
 ```yaml
-# playbooks/HighCPUUsage.yaml
+# playbooks/high_cpu_usage.yaml
 name: High CPU Usage Response
 instruction: >
   Focus on processes consuming the most CPU. Check for runaway jobs or
@@ -148,7 +146,7 @@ services/
   grafana.py      ← Prometheus metric queries + Playwright screenshots
   ai.py           ← Google Gemini integration
   email.py        ← SMTP delivery
-  github.py       ← Playbook retrieval from GitHub
+  playbooks.py    ← Playbook retrieval from local directory
 playbooks/        ← Example YAML playbooks
 config.py         ← Env var loading with fail-fast validation
 main.py           ← FastAPI app entry point
