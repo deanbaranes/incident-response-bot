@@ -12,24 +12,24 @@ logger = logging.getLogger(__name__)
 # This provides the AI and the final report with live data context
 def fetch_grafana_metric(target_name, query):
     """Fetch live data from Prometheus API."""
-    headers = {"Content-Type": "application/json"}
-
-    auth = (GRAFANA_USERNAME, GRAFANA_TOKEN) if GRAFANA_USERNAME else None
-
-    if not auth:
-        headers["Authorization"] = f"Bearer {GRAFANA_TOKEN}"
+    # Use Bearer authentication with the Grafana Token (required for proxy access)
+    headers = {
+        "Content-Type": "application/json",
+        "Authorization": f"Bearer {GRAFANA_TOKEN}"
+    }
 
     if not GRAFANA_URL:
         return "Error: GRAFANA_URL is not configured"
 
     base_url = GRAFANA_URL.rstrip("/")
-    api_url = f"{base_url}/api/prom/api/v1/query"
+    # Using the Grafana Proxy (Data Source 8) to bypass direct Prometheus authentication issues
+    api_url = f"{base_url}/api/datasources/proxy/8/api/v1/query"
 
     try:
         logger.info(f"Fetching metric: {target_name}")
 
-        # Check 1: Time clipping - block long historical queries (DoS prevention)
-        if re.search(r"\[[0-9]+[yMwd]\]", query):
+        # Check 1: Input Validation - prevent massive time range queries
+        if "range" in query or "1y" in query:
             logger.warning(
                 f"BLOCKED: Query for '{target_name}' exceeds maximum allowed time range."
             )
@@ -42,23 +42,17 @@ def fetch_grafana_metric(target_name, query):
         response = requests.get(
             api_url,
             headers=headers,
-            auth=auth,
             params={"query": safe_query, "timeout": "25s"},
             timeout=30,
         )
         response.raise_for_status()
+        data = response.json()
 
-        result = response.json()
-        data_results = result.get("data", {}).get("result", [])
-
-        # Check 4: Guard Clause - ensure data exists before indexing to avoid IndexError crashes
+        data_results = data.get("data", {}).get("result", [])
         if not data_results:
-            logger.warning(
-                f"Prometheus query returned no data points for '{target_name}'."
-            )
+            logger.warning(f"Prometheus query returned no data points for '{target_name}'.")
             return "No active data points found."
 
-        # Check 5: Safely parse numerical values and handle Prometheus NaN/Inf edge cases
         try:
             value_str = data_results[0]["value"][1]
             if str(value_str).lower() == "nan":
@@ -75,19 +69,30 @@ def fetch_grafana_metric(target_name, query):
             )
             return "Invalid data format received."
 
+    except requests.exceptions.RequestException as e:
+        logger.error(f"Connection Failed for '{target_name}': {e}")
+        return f"Connection Failed: {e}"
     except Exception as e:
-        return f"Connection Failed: {str(e)}"
+        logger.error(f"Unknown error fetching '{target_name}': {e}")
+        return "Unexpected error."
 
 
-# Opens a headless browser to snap a picture of the Grafana dashboard
-def capture_dashboard(url, output_path="dashboard.png"):
-    """Capture a screenshot of the dashboard."""
+# Captures a snapshot of a Grafana dashboard using Playwright
+# Uses a smart wait for the '.panel-content' to ensure charts are rendered
+def capture_dashboard(url, output_path):
+    """Take a screenshot of a Grafana dashboard."""
     try:
         with sync_playwright() as p:
             browser = p.chromium.launch(headless=True)
             context = browser.new_context(viewport={"width": 1920, "height": 1080})
             page = context.new_page()
-            page.goto(url, wait_until="networkidle", timeout=30000)
+            page.goto(url, wait_until="domcontentloaded")
+            try:
+                # Wait specifically for Grafana panels to render content
+                page.wait_for_selector(".panel-content", state="visible", timeout=15000)
+            except Exception:
+                logger.warning("Panel content not found within timeout, taking screenshot as-is.")
+
             page.screenshot(path=output_path)
             browser.close()
             return output_path
