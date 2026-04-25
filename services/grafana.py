@@ -1,9 +1,8 @@
 import requests
 import logging
 import math
-import re
 from playwright.sync_api import sync_playwright
-from config import GRAFANA_URL, GRAFANA_USERNAME, GRAFANA_TOKEN
+from config import GRAFANA_URL, GRAFANA_TOKEN
 
 logger = logging.getLogger(__name__)
 
