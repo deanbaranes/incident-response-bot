@@ -1,0 +1,20 @@
+name: HighCPUUsage
+instruction: |
+  You are an SRE responding to a high CPU alert. Analyze the metrics and screenshot,
+  identify the likely cause (runaway process, load spike, misconfigured autoscaler),
+  and recommend immediate remediation steps and a longer-term fix.
+actions:
+  - type: capture_dashboard_screenshot
+    url: "https://dinbaranes.grafana.net/public-dashboards/6b201773936640628436787ab837de09"
+
+  - type: fetch_metrics
+    target: CPU Usage
+    query: "100 - (avg by (instance) (irate(windows_cpu_time_total{mode='idle'}[5m])) * 100)"
+
+  - type: fetch_metrics
+    target: Processor Queue Length
+    query: "windows_system_processor_queue_length"
+
+  - type: ai_analysis
+
+  - type: send_notification

@@ -1,0 +1,19 @@
+name: HighMemoryUsage
+instruction: |
+  You are an SRE responding to a high memory usage alert. Analyze the metrics,
+  identify memory leaks or unexpected growth, and recommend immediate actions
+  (e.g. restart, heap dump) and longer-term fixes.
+actions:
+  - type: capture_dashboard_screenshot
+
+  - type: fetch_metrics
+    target: Memory Usage
+    query: "100 * (1 - ((avg_over_time(node_memory_MemFree_bytes[5m]) + avg_over_time(node_memory_Cached_bytes[5m]) + avg_over_time(node_memory_Buffers_bytes[5m])) / avg_over_time(node_memory_MemTotal_bytes[5m])))"
+
+  - type: fetch_metrics
+    target: Available Memory
+    query: "node_memory_MemAvailable_bytes / 1024 / 1024"
+
+  - type: ai_analysis
+
+  - type: send_notification
