@@ -14,7 +14,7 @@ def fetch_grafana_metric(target_name, query):
     # Use Bearer authentication with the Grafana Token (required for proxy access)
     headers = {
         "Content-Type": "application/json",
-        "Authorization": f"Bearer {GRAFANA_TOKEN}"
+        "Authorization": f"Bearer {GRAFANA_TOKEN}",
     }
 
     if not GRAFANA_URL:
@@ -49,7 +49,9 @@ def fetch_grafana_metric(target_name, query):
 
         data_results = data.get("data", {}).get("result", [])
         if not data_results:
-            logger.warning(f"Prometheus query returned no data points for '{target_name}'.")
+            logger.warning(
+                f"Prometheus query returned no data points for '{target_name}'."
+            )
             return "No active data points found."
 
         try:
@@ -90,7 +92,9 @@ def capture_dashboard(url, output_path):
                 # Wait specifically for Grafana panels to render content
                 page.wait_for_selector(".panel-content", state="visible", timeout=15000)
             except Exception:
-                logger.warning("Panel content not found within timeout, taking screenshot as-is.")
+                logger.warning(
+                    "Panel content not found within timeout, taking screenshot as-is."
+                )
 
             page.screenshot(path=output_path)
             browser.close()
