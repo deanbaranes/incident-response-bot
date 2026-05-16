@@ -10,7 +10,7 @@ def create_jira_ticket(
     summary: str, description: str, issue_type: str = "Task", priority: str = "High"
 ) -> bool:
     """Create an incident ticket in Jira."""
-    if not all([JIRA_BASE_URL, JIRA_USER, JIRA_API_TOKEN, JIRA_PROJECT_KEY]):
+    if not JIRA_BASE_URL or not JIRA_USER or not JIRA_API_TOKEN or not JIRA_PROJECT_KEY:
         logger.info(f"MOCK JIRA TICKET: [{JIRA_PROJECT_KEY or 'KAN'}] {summary}")
         return True
 
