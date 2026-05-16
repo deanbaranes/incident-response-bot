@@ -12,7 +12,8 @@ Grafana alert → webhook → fetch metrics + screenshot → Gemini AI RCA → e
 - **Live metric enrichment** — queries Prometheus directly so the report reflects the moment of the alert, not stale averages
 - **Visual context** — headless Playwright captures a Grafana dashboard screenshot and attaches it to the report
 - **AI root cause analysis** — Google Gemini analyzes metrics + screenshot and outputs 3 actionable troubleshooting steps
-- **Multi-recipient email** — comma-separated `EMAIL_RECIPIENTS` env var; no code changes needed
+- **Multi-channel notifications** — Built-in support for Email, Slack, Jira, PagerDuty, OpsGenie, and Grafana OnCall
+- **Structured Logging** — JSON-based structured logging with unique `incident_id` for end-to-end tracebility
 - **Webhook authentication** — HMAC-SHA256 signature verification (Grafana-native)
 - **Fail-fast startup** — app refuses to start if required env vars are missing
 
@@ -90,6 +91,12 @@ All configuration is via environment variables. Copy [`.env.example`](.env.examp
 | `GRAFANA_USERNAME` | No | — | Grafana Cloud Prometheus instance ID (omit for bearer-auth) |
 | `GRAFANA_TOKEN` | **Yes** | — | Service account token with Metrics Reader role |
 | `GRAFANA_DASHBOARD_URL` | No | — | Fallback dashboard URL when playbook omits one |
+| `GRAFANA_PROMETHEUS_DATASOURCE_ID`| No | `8` | The data source ID for Prometheus in the Grafana Proxy |
+| `SLACK_WEBHOOK_URL`| No | — | Slack incoming webhook URL for alerts |
+| `JIRA_BASE_URL` | No | — | Base URL for Jira Cloud |
+| `JIRA_PROJECT_KEY`| No | — | Key of the Jira project to create tickets in (e.g., KAN) |
+| `JIRA_USER` | No | — | Jira user email |
+| `JIRA_API_TOKEN` | No | — | Jira API token for authentication |
 
 ## Playbooks
 
@@ -130,6 +137,11 @@ actions:
 | `fetch_metrics` | Queries Prometheus and adds the result to AI context |
 | `ai_analysis` | Sends accumulated context + screenshot to Gemini for RCA |
 | `send_notification` | Emails the full incident report to `EMAIL_RECIPIENTS` |
+| `send_slack_notification` | Sends a summary message to Slack |
+| `create_jira_ticket` | Creates a Task ticket in Jira with incident details |
+| `create_pagerduty_incident` | Triggers a PagerDuty incident |
+| `send_opsgenie_alert` | Triggers an OpsGenie alert |
+| `send_grafana_oncall_alert` | Triggers a Grafana OnCall alert |
 
 ### Fallback behaviour
 
@@ -142,10 +154,16 @@ api/
   webhook.py      ← FastAPI endpoint, HMAC auth, Pydantic validation
 core/
   engine.py       ← Orchestrates playbook action sequence
+  log_config.py   ← Custom structured JSON logging and formatting
 services/
   grafana.py      ← Prometheus metric queries + Playwright screenshots
   ai.py           ← Google Gemini integration
   email.py        ← SMTP delivery
+  slack.py        ← Slack webhook integration
+  jira.py         ← Jira ticket creation
+  pagerduty.py    ← PagerDuty mocking
+  opsgenie.py     ← OpsGenie mocking
+  grafana_oncall.py ← Grafana OnCall mocking
   playbooks.py    ← Playbook retrieval from local directory
 playbooks/        ← Example YAML playbooks
 config.py         ← Env var loading with fail-fast validation
@@ -162,7 +180,7 @@ main.py           ← FastAPI app entry point
 
 ## Contributing
 
-See [CONTRIBUTING.md](CONTRIBUTING.md) (coming soon). PRs welcome — especially new playbook examples and additional notifier integrations (Slack, PagerDuty, Jira).
+See [CONTRIBUTING.md](CONTRIBUTING.md) (coming soon). PRs welcome — especially new playbook examples and advanced AI workflows.
 
 ## Security
 
