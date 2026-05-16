@@ -7,6 +7,7 @@ load_dotenv()
 GRAFANA_URL = os.getenv("GRAFANA_URL")
 GRAFANA_USERNAME = os.getenv("GRAFANA_USERNAME")
 GRAFANA_TOKEN = os.getenv("GRAFANA_TOKEN")
+GRAFANA_PROMETHEUS_DATASOURCE_ID = os.getenv("GRAFANA_PROMETHEUS_DATASOURCE_ID", "8")
 
 
 def test_query_basic():
@@ -55,14 +56,14 @@ def test_query_bearer():
 def test_query_proxy():
     # We use the Grafana UI URL here because that's where the proxy lives
     grafana_ui_url = "https://dinbaranes.grafana.net"
-    api_url = f"{grafana_ui_url}/api/datasources/proxy/8/api/v1/query"
+    api_url = f"{grafana_ui_url}/api/datasources/proxy/{GRAFANA_PROMETHEUS_DATASOURCE_ID}/api/v1/query"
 
     headers = {
         "Content-Type": "application/json",
         "Authorization": f"Bearer {GRAFANA_TOKEN}",
     }
 
-    print(f"\nTesting Proxy Auth (DS 8) at: {api_url}")
+    print(f"\nTesting Proxy Auth (DS {GRAFANA_PROMETHEUS_DATASOURCE_ID}) at: {api_url}")
     try:
         response = requests.get(
             api_url, headers=headers, params={"query": "up"}, timeout=10

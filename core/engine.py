@@ -56,7 +56,8 @@ def process_incident(data, incident_id=None):
                     if target_url:
                         logger.info(f"Capturing dashboard: {target_url}")
                         safe_alert_name = re.sub(r"[^a-zA-Z0-9_]", "_", alert_name)
-                        unique_filename = f"snapshot_{safe_alert_name}.png"
+                        current_id = incident_id or incident_id_var.get("unknown")
+                        unique_filename = f"snapshot_{safe_alert_name}_{current_id}.png"
                         screenshot_path = capture_dashboard(target_url, unique_filename)
 
                         if screenshot_path:
@@ -114,10 +115,22 @@ def process_incident(data, incident_id=None):
                         )
                         execution_steps += "Notification: RCA report dispatched.\n"
                         logger.info(f"Sent email for {alert_name}")
+                    except Exception as e:
+                        logger.error(
+                            f"Failed to send email report for {alert_name}: {e}"
+                        )
+                        execution_steps += (
+                            f"Notification: Failed to dispatch RCA report ({e}).\n"
+                        )
                     finally:
                         if screenshot_path and os.path.exists(screenshot_path):
-                            os.remove(screenshot_path)
-                            logger.info(f"Cleaned up screenshot: {screenshot_path}")
+                            try:
+                                os.remove(screenshot_path)
+                                logger.info(f"Cleaned up screenshot: {screenshot_path}")
+                            except Exception as cleanup_err:
+                                logger.error(
+                                    f"Failed to clean up screenshot {screenshot_path}: {cleanup_err}"
+                                )
 
                 # Send Slack Notification
                 elif action_type == "send_slack_notification":

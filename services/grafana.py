@@ -3,7 +3,7 @@ import logging
 import math
 import urllib.parse
 from playwright.sync_api import sync_playwright
-from config import GRAFANA_URL, GRAFANA_TOKEN
+from config import GRAFANA_URL, GRAFANA_TOKEN, GRAFANA_PROMETHEUS_DATASOURCE_ID
 
 logger = logging.getLogger(__name__)
 
@@ -22,8 +22,8 @@ def fetch_grafana_metric(target_name, query):
         return "Error: GRAFANA_URL is not configured"
 
     base_url = GRAFANA_URL.rstrip("/")
-    # Using the Grafana Proxy (Data Source 8) to bypass direct Prometheus authentication issues
-    api_url = f"{base_url}/api/datasources/proxy/8/api/v1/query"
+    # Using the Grafana Proxy to bypass direct Prometheus authentication issues
+    api_url = f"{base_url}/api/datasources/proxy/{GRAFANA_PROMETHEUS_DATASOURCE_ID}/api/v1/query"
 
     try:
         logger.info(f"Fetching metric: {target_name}")
