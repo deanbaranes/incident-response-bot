@@ -1,6 +1,7 @@
 import requests
 import logging
 import math
+import urllib.parse
 from playwright.sync_api import sync_playwright
 from config import GRAFANA_URL, GRAFANA_TOKEN
 
@@ -76,9 +77,6 @@ def fetch_grafana_metric(target_name, query):
     except Exception as e:
         logger.error(f"Unknown error fetching '{target_name}': {e}")
         return "Unexpected error."
-
-
-import urllib.parse
 
 
 # Captures a snapshot of a Grafana dashboard using Playwright
