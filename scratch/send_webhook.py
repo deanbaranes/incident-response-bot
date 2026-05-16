@@ -4,12 +4,10 @@ payload = {
     "alerts": [
         {
             "status": "firing",
-            "labels": {
-                "alertname": "high_cpu_usage"
-            },
+            "labels": {"alertname": "high_cpu_usage"},
             "annotations": {
                 "summary": "Test Alert: CPU usage is above 95% on instance prod-web-01 (This is a test to verify Slack)"
-            }
+            },
         }
     ]
 }

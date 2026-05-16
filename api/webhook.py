@@ -58,6 +58,6 @@ async def webhook_receiver(request: Request, background_tasks: BackgroundTasks):
 
     incident_id = str(uuid.uuid4())
     logger.info(f"Received webhook for incident {incident_id}")
-    
+
     background_tasks.add_task(process_incident, payload.model_dump(), incident_id)
     return {"status": "processing"}

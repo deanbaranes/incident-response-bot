@@ -127,7 +127,9 @@ def process_incident(data, incident_id=None):
                         f"LIVE SYSTEM CONTEXT:\n{enriched_data}\n"
                         f"AI RECOMMENDATIONS & RCA:\n{ai_output}\n"
                     )
-                    send_slack_alert(slack_message, title=f"Incident Alert: {alert_name}")
+                    send_slack_alert(
+                        slack_message, title=f"Incident Alert: {alert_name}"
+                    )
                     execution_steps += "Notification: Slack alert dispatched.\n"
 
                 # Create Jira Ticket
@@ -138,25 +140,39 @@ def process_incident(data, incident_id=None):
                         f"LIVE SYSTEM CONTEXT:\n{enriched_data}\n"
                         f"AI RECOMMENDATIONS & RCA:\n{ai_output}\n"
                     )
-                    create_jira_ticket(summary=f"[{alert_name}] Incident Alert", description=jira_desc)
+                    create_jira_ticket(
+                        summary=f"[{alert_name}] Incident Alert", description=jira_desc
+                    )
                     execution_steps += "Ticketing: Jira ticket created.\n"
 
                 # Create PagerDuty Incident
                 elif action_type == "create_pagerduty_incident":
                     logger.info("Triggering PagerDuty...")
-                    create_pagerduty_incident(title=f"Incident: {alert_name}", message=summary, alert_name=alert_name)
+                    create_pagerduty_incident(
+                        title=f"Incident: {alert_name}",
+                        message=summary,
+                        alert_name=alert_name,
+                    )
                     execution_steps += "Notification: PagerDuty triggered.\n"
 
                 # Create OpsGenie Alert
                 elif action_type == "send_opsgenie_alert":
                     logger.info("Triggering OpsGenie...")
-                    send_opsgenie_alert(title=f"Incident: {alert_name}", message=summary, alert_name=alert_name)
+                    send_opsgenie_alert(
+                        title=f"Incident: {alert_name}",
+                        message=summary,
+                        alert_name=alert_name,
+                    )
                     execution_steps += "Notification: OpsGenie triggered.\n"
 
                 # Send Grafana OnCall Alert
                 elif action_type == "send_grafana_oncall_alert":
                     logger.info("Triggering Grafana OnCall...")
-                    send_grafana_oncall_alert(title=f"Incident: {alert_name}", message=summary, alert_name=alert_name)
+                    send_grafana_oncall_alert(
+                        title=f"Incident: {alert_name}",
+                        message=summary,
+                        alert_name=alert_name,
+                    )
                     execution_steps += "Notification: Grafana OnCall triggered.\n"
 
         else:
