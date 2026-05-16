@@ -100,7 +100,7 @@ def capture_dashboard(url, output_path):
             browser = p.chromium.launch(headless=True)
             context = browser.new_context(viewport={"width": 1920, "height": 1080})
             page = context.new_page()
-            page.goto(url, wait_until="domcontentloaded")
+            page.goto(url, wait_until="domcontentloaded", timeout=30000)
             try:
                 # Wait specifically for Grafana panels to render content
                 page.wait_for_selector(".panel-content", state="visible", timeout=15000)
