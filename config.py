@@ -17,6 +17,18 @@ GRAFANA_URL = os.getenv("GRAFANA_URL")
 GRAFANA_USERNAME = os.getenv("GRAFANA_USERNAME")
 GRAFANA_TOKEN = os.getenv("GRAFANA_TOKEN")
 GRAFANA_DASHBOARD_URL = os.getenv("GRAFANA_DASHBOARD_URL")
+SLACK_WEBHOOK_URL = os.getenv("SLACK_WEBHOOK_URL")
+
+# Jira
+JIRA_BASE_URL = os.getenv("JIRA_BASE_URL")
+JIRA_USER = os.getenv("JIRA_USER")
+JIRA_API_TOKEN = os.getenv("JIRA_API_TOKEN")
+JIRA_PROJECT_KEY = os.getenv("JIRA_PROJECT_KEY")
+
+# Other mock integrations
+GRAFANA_ONCALL_WEBHOOK_URL = os.getenv("GRAFANA_ONCALL_WEBHOOK_URL")
+OPSGENIE_API_KEY = os.getenv("OPSGENIE_API_KEY")
+PAGERDUTY_ROUTING_KEY = os.getenv("PAGERDUTY_ROUTING_KEY")
 EMAIL_RECIPIENTS = [
     r.strip() for r in os.getenv("EMAIL_RECIPIENTS", "").split(",") if r.strip()
 ]

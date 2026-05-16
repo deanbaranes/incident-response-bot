@@ -1,6 +1,7 @@
 import hmac
 import hashlib
 import logging
+import uuid
 from fastapi import APIRouter, BackgroundTasks, Request, HTTPException
 from pydantic import BaseModel, Field
 from typing import List, Dict, Any, Optional
@@ -55,5 +56,8 @@ async def webhook_receiver(request: Request, background_tasks: BackgroundTasks):
         logger.warning("Rejected webhook: malformed JSON or missing required fields")
         raise HTTPException(status_code=422, detail="Unprocessable Entity")
 
-    background_tasks.add_task(process_incident, payload.model_dump())
+    incident_id = str(uuid.uuid4())
+    logger.info(f"Received webhook for incident {incident_id}")
+    
+    background_tasks.add_task(process_incident, payload.model_dump(), incident_id)
     return {"status": "processing"}

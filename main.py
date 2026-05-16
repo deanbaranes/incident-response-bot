@@ -4,10 +4,9 @@ import config  # noqa: F401 — imported for startup env-var validation side-eff
 from fastapi import FastAPI
 from api.webhook import router as webhook_router
 
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s - %(levelname)s - [%(name)s] - %(message)s\n",
-)
+from core.log_config import setup_logging
+
+setup_logging()
 logger = logging.getLogger(__name__)
 
 app = FastAPI()

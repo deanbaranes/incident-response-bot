@@ -16,4 +16,8 @@ actions:
 
   - type: ai_analysis
 
+  - type: send_slack_notification
+
+  - type: create_jira_ticket
+
   - type: send_notification

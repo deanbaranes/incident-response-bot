@@ -6,12 +6,20 @@ from services.playbooks import load_playbook
 from services.grafana import capture_dashboard, fetch_grafana_metric
 from services.ai import get_ai_analysis
 from services.email import send_email_report
+from services.slack import send_slack_alert
+from services.jira import create_jira_ticket
+from services.pagerduty import create_pagerduty_incident
+from services.opsgenie import send_opsgenie_alert
+from services.grafana_oncall import send_grafana_oncall_alert
+from core.log_config import incident_id_var
 
 logger = logging.getLogger(__name__)
 
 
-def process_incident(data):
+def process_incident(data, incident_id=None):
     """Process incoming webhook alerts and execute incident response playbooks."""
+    if incident_id:
+        incident_id_var.set(incident_id)
     if "alerts" not in data:
         send_email_report(
             "BOT TEST", "Responder Bot is Online and listening to Webhooks."
@@ -110,6 +118,46 @@ def process_incident(data):
                         if screenshot_path and os.path.exists(screenshot_path):
                             os.remove(screenshot_path)
                             logger.info(f"Cleaned up screenshot: {screenshot_path}")
+
+                # Send Slack Notification
+                elif action_type == "send_slack_notification":
+                    logger.info("Sending Slack notification...")
+                    slack_message = (
+                        f"CRITICAL SUMMARY:\n{summary}\n\n"
+                        f"LIVE SYSTEM CONTEXT:\n{enriched_data}\n"
+                        f"AI RECOMMENDATIONS & RCA:\n{ai_output}\n"
+                    )
+                    send_slack_alert(slack_message, title=f"Incident Alert: {alert_name}")
+                    execution_steps += "Notification: Slack alert dispatched.\n"
+
+                # Create Jira Ticket
+                elif action_type == "create_jira_ticket":
+                    logger.info("Creating Jira ticket...")
+                    jira_desc = (
+                        f"CRITICAL SUMMARY:\n{summary}\n\n"
+                        f"LIVE SYSTEM CONTEXT:\n{enriched_data}\n"
+                        f"AI RECOMMENDATIONS & RCA:\n{ai_output}\n"
+                    )
+                    create_jira_ticket(summary=f"[{alert_name}] Incident Alert", description=jira_desc)
+                    execution_steps += "Ticketing: Jira ticket created.\n"
+
+                # Create PagerDuty Incident
+                elif action_type == "create_pagerduty_incident":
+                    logger.info("Triggering PagerDuty...")
+                    create_pagerduty_incident(title=f"Incident: {alert_name}", message=summary, alert_name=alert_name)
+                    execution_steps += "Notification: PagerDuty triggered.\n"
+
+                # Create OpsGenie Alert
+                elif action_type == "send_opsgenie_alert":
+                    logger.info("Triggering OpsGenie...")
+                    send_opsgenie_alert(title=f"Incident: {alert_name}", message=summary, alert_name=alert_name)
+                    execution_steps += "Notification: OpsGenie triggered.\n"
+
+                # Send Grafana OnCall Alert
+                elif action_type == "send_grafana_oncall_alert":
+                    logger.info("Triggering Grafana OnCall...")
+                    send_grafana_oncall_alert(title=f"Incident: {alert_name}", message=summary, alert_name=alert_name)
+                    execution_steps += "Notification: Grafana OnCall triggered.\n"
 
         else:
             logger.warning(f"No playbook for '{alert_name}'. Using fallback.")

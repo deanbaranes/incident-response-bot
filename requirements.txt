@@ -6,3 +6,4 @@ pyyaml
 playwright
 google-generativeai
 Pillow
+python-json-logger
