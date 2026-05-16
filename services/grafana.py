@@ -78,10 +78,23 @@ def fetch_grafana_metric(target_name, query):
         return "Unexpected error."
 
 
+import urllib.parse
+
+
 # Captures a snapshot of a Grafana dashboard using Playwright
 # Uses a smart wait for the '.panel-content' to ensure charts are rendered
 def capture_dashboard(url, output_path):
     """Take a screenshot of a Grafana dashboard."""
+    # SSRF Protection: Validate the URL belongs to our Grafana instance
+    parsed_target = urllib.parse.urlparse(url)
+    parsed_base = urllib.parse.urlparse(GRAFANA_URL)
+
+    if parsed_target.netloc != parsed_base.netloc:
+        logger.error(
+            f"SSRF Protection triggered: blocked access to external host '{parsed_target.netloc}'"
+        )
+        return None
+
     try:
         with sync_playwright() as p:
             browser = p.chromium.launch(headless=True)
