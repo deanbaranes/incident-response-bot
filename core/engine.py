@@ -1,6 +1,7 @@
 import os
 import re
 import logging
+import asyncio
 from config import GRAFANA_DASHBOARD_URL
 from services.playbooks import load_playbook
 from services.grafana import capture_dashboard, fetch_grafana_metric
@@ -16,13 +17,15 @@ from core.log_config import incident_id_var
 logger = logging.getLogger(__name__)
 
 
-def process_incident(data, incident_id=None):
+async def process_incident(data, incident_id=None):
     """Process incoming webhook alerts and execute incident response playbooks."""
     if incident_id:
         incident_id_var.set(incident_id)
     if "alerts" not in data:
-        send_email_report(
-            "BOT TEST", "Responder Bot is Online and listening to Webhooks."
+        await asyncio.to_thread(
+            send_email_report,
+            "BOT TEST",
+            "Responder Bot is Online and listening to Webhooks.",
         )
         return
 
@@ -58,7 +61,9 @@ def process_incident(data, incident_id=None):
                         safe_alert_name = re.sub(r"[^a-zA-Z0-9_]", "_", alert_name)
                         current_id = incident_id or incident_id_var.get("unknown")
                         unique_filename = f"snapshot_{safe_alert_name}_{current_id}.png"
-                        screenshot_path = capture_dashboard(target_url, unique_filename)
+                        screenshot_path = await asyncio.to_thread(
+                            capture_dashboard, target_url, unique_filename
+                        )
 
                         if screenshot_path:
                             execution_steps += f"Visual Evidence: Dashboard captured from {target_url}\n"
@@ -80,14 +85,17 @@ def process_incident(data, incident_id=None):
                         else:
                             prom_query = target
 
-                    metric_val = fetch_grafana_metric(target, prom_query)
+                    metric_val = await asyncio.to_thread(
+                        fetch_grafana_metric, target, prom_query
+                    )
                     enriched_data += f"- [Metric] {target}: {metric_val}\n"
                     execution_steps += f"Enrichment: {target} metrics retrieved.\n"
 
                 # AI Root Cause Analysis
                 elif action_type == "ai_analysis":
                     logger.info("Running AI analysis...")
-                    ai_output = get_ai_analysis(
+                    ai_output = await asyncio.to_thread(
+                        get_ai_analysis,
                         alert_name,
                         enriched_data,
                         screenshot_path,
@@ -110,8 +118,11 @@ def process_incident(data, incident_id=None):
 
                     subject = f"Incident Report: {alert_name}"
                     try:
-                        send_email_report(
-                            subject, report_body, attachment_path=screenshot_path
+                        await asyncio.to_thread(
+                            send_email_report,
+                            subject,
+                            report_body,
+                            attachment_path=screenshot_path,
                         )
                         execution_steps += "Notification: RCA report dispatched.\n"
                         logger.info(f"Sent email for {alert_name}")
@@ -123,9 +134,11 @@ def process_incident(data, incident_id=None):
                             f"Notification: Failed to dispatch RCA report ({e}).\n"
                         )
                     finally:
-                        if screenshot_path and os.path.exists(screenshot_path):
+                        if screenshot_path and await asyncio.to_thread(
+                            os.path.exists, screenshot_path
+                        ):
                             try:
-                                os.remove(screenshot_path)
+                                await asyncio.to_thread(os.remove, screenshot_path)
                                 logger.info(f"Cleaned up screenshot: {screenshot_path}")
                             except Exception as cleanup_err:
                                 logger.error(
@@ -140,8 +153,10 @@ def process_incident(data, incident_id=None):
                         f"LIVE SYSTEM CONTEXT:\n{enriched_data}\n"
                         f"AI RECOMMENDATIONS & RCA:\n{ai_output}\n"
                     )
-                    send_slack_alert(
-                        slack_message, title=f"Incident Alert: {alert_name}"
+                    await asyncio.to_thread(
+                        send_slack_alert,
+                        slack_message,
+                        title=f"Incident Alert: {alert_name}",
                     )
                     execution_steps += "Notification: Slack alert dispatched.\n"
 
@@ -153,15 +168,18 @@ def process_incident(data, incident_id=None):
                         f"LIVE SYSTEM CONTEXT:\n{enriched_data}\n"
                         f"AI RECOMMENDATIONS & RCA:\n{ai_output}\n"
                     )
-                    create_jira_ticket(
-                        summary=f"[{alert_name}] Incident Alert", description=jira_desc
+                    await asyncio.to_thread(
+                        create_jira_ticket,
+                        summary=f"[{alert_name}] Incident Alert",
+                        description=jira_desc,
                     )
                     execution_steps += "Ticketing: Jira ticket created.\n"
 
                 # Create PagerDuty Incident
                 elif action_type == "create_pagerduty_incident":
                     logger.info("Triggering PagerDuty...")
-                    create_pagerduty_incident(
+                    await asyncio.to_thread(
+                        create_pagerduty_incident,
                         title=f"Incident: {alert_name}",
                         message=summary,
                         alert_name=alert_name,
@@ -171,7 +189,8 @@ def process_incident(data, incident_id=None):
                 # Create OpsGenie Alert
                 elif action_type == "send_opsgenie_alert":
                     logger.info("Triggering OpsGenie...")
-                    send_opsgenie_alert(
+                    await asyncio.to_thread(
+                        send_opsgenie_alert,
                         title=f"Incident: {alert_name}",
                         message=summary,
                         alert_name=alert_name,
@@ -181,7 +200,8 @@ def process_incident(data, incident_id=None):
                 # Send Grafana OnCall Alert
                 elif action_type == "send_grafana_oncall_alert":
                     logger.info("Triggering Grafana OnCall...")
-                    send_grafana_oncall_alert(
+                    await asyncio.to_thread(
+                        send_grafana_oncall_alert,
                         title=f"Incident: {alert_name}",
                         message=summary,
                         alert_name=alert_name,
@@ -190,8 +210,15 @@ def process_incident(data, incident_id=None):
 
         else:
             logger.warning(f"No playbook for '{alert_name}'. Using fallback.")
-            ai_output = get_ai_analysis(alert_name, summary, screenshot_path=None)
+            ai_output = await asyncio.to_thread(
+                get_ai_analysis, alert_name, summary, screenshot_path=None
+            )
 
             fallback_subject = f"[Alert] {alert_name} (No Playbook Found)"
             fallback_content = f"AI Insight (Text Analysis): {ai_output}\n\nPlease define a YAML playbook for this alert type if you want screenshots or deeper analysis."
-            send_email_report(fallback_subject, fallback_content, attachment_path=None)
+            await asyncio.to_thread(
+                send_email_report,
+                fallback_subject,
+                fallback_content,
+                attachment_path=None,
+            )

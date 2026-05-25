@@ -38,6 +38,13 @@ EMAIL_RECIPIENTS = [
 # Generate with: python -c "import secrets; print(secrets.token_hex(32))"
 WEBHOOK_SECRET = os.getenv("WEBHOOK_SECRET")
 
+# Kafka Settings
+KAFKA_BOOTSTRAP_SERVERS = os.getenv("KAFKA_BOOTSTRAP_SERVERS", "kafka:9092")
+KAFKA_INCIDENT_TOPIC = os.getenv("KAFKA_INCIDENT_TOPIC", "incident.webhooks")
+KAFKA_CONSUMER_GROUP = os.getenv("KAFKA_CONSUMER_GROUP", "incident-responder")
+KAFKA_DLQ_TOPIC = os.getenv("KAFKA_DLQ_TOPIC", "incident.webhooks.dlq")
+USE_KAFKA_QUEUE = os.getenv("USE_KAFKA_QUEUE", "false").lower() == "true"
+
 # --- Validation ---
 _REQUIRED = [
     "GEMINI_API_KEY",

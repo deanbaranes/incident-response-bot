@@ -1,13 +1,15 @@
+import pytest
 from unittest.mock import patch
 from core.engine import process_incident
 
 
+@pytest.mark.asyncio
 @patch("core.engine.load_playbook")
 @patch("core.engine.capture_dashboard")
 @patch("core.engine.fetch_grafana_metric")
 @patch("core.engine.get_ai_analysis")
 @patch("core.engine.send_email_report")
-def test_process_incident_with_playbook(
+async def test_process_incident_with_playbook(
     mock_send_email, mock_get_ai, mock_fetch_metric, mock_capture, mock_load_playbook
 ):
     """Test process_incident when a playbook is found."""
@@ -32,7 +34,7 @@ def test_process_incident_with_playbook(
         ]
     }
 
-    process_incident(payload)
+    await process_incident(payload)
 
     # Check playbook was loaded
     mock_load_playbook.assert_called_once_with("HighCPUUsage")
@@ -44,10 +46,13 @@ def test_process_incident_with_playbook(
     mock_send_email.assert_called_once()
 
 
+@pytest.mark.asyncio
 @patch("core.engine.load_playbook")
 @patch("core.engine.get_ai_analysis")
 @patch("core.engine.send_email_report")
-def test_process_incident_fallback(mock_send_email, mock_get_ai, mock_load_playbook):
+async def test_process_incident_fallback(
+    mock_send_email, mock_get_ai, mock_load_playbook
+):
     """Test process_incident fallback when playbook is NOT found."""
     mock_load_playbook.return_value = None
     mock_get_ai.return_value = "Basic AI Insight"
@@ -62,7 +67,7 @@ def test_process_incident_fallback(mock_send_email, mock_get_ai, mock_load_playb
         ]
     }
 
-    process_incident(payload)
+    await process_incident(payload)
 
     mock_load_playbook.assert_called_once_with("UnknownAlert")
     # AI should still be called

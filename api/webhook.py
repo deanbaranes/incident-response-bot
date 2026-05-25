@@ -5,12 +5,43 @@ import uuid
 from fastapi import APIRouter, BackgroundTasks, Request, HTTPException
 from pydantic import BaseModel, Field
 from typing import List, Dict, Any, Optional
+import json
+from aiokafka import AIOKafkaProducer  # type: ignore
+
 from core.engine import process_incident
-from config import WEBHOOK_SECRET
+from config import (
+    WEBHOOK_SECRET,
+    USE_KAFKA_QUEUE,
+    KAFKA_BOOTSTRAP_SERVERS,
+    KAFKA_INCIDENT_TOPIC,
+)
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter()
+
+producer: Optional[AIOKafkaProducer] = None
+
+
+async def init_producer():
+    global producer
+    if USE_KAFKA_QUEUE:
+        try:
+            producer = AIOKafkaProducer(
+                bootstrap_servers=KAFKA_BOOTSTRAP_SERVERS,
+                value_serializer=lambda v: json.dumps(v).encode("utf-8"),
+            )
+            await producer.start()
+            logger.info("Kafka Producer started.")
+        except Exception as e:
+            logger.error(f"Failed to start Kafka Producer: {e}")
+
+
+async def close_producer():
+    global producer
+    if producer:
+        await producer.stop()
+        logger.info("Kafka Producer stopped.")
 
 
 # Schema for an individual alert
@@ -59,5 +90,21 @@ async def webhook_receiver(request: Request, background_tasks: BackgroundTasks):
     incident_id = str(uuid.uuid4())
     logger.info(f"Received webhook for incident {incident_id}")
 
-    background_tasks.add_task(process_incident, payload.model_dump(), incident_id)
-    return {"status": "processing"}
+    if USE_KAFKA_QUEUE and producer:
+        try:
+            message = payload.model_dump()
+            message["incident_id"] = incident_id
+            key = payload.alerts[0].labels.get("alertname", "unknown").encode("utf-8")
+            await producer.send_and_wait(
+                topic=KAFKA_INCIDENT_TOPIC, value=message, key=key
+            )
+            logger.info(f"Published incident {incident_id} to Kafka")
+        except Exception as e:
+            logger.error(f"Failed to publish to Kafka: {e}")
+            raise HTTPException(
+                status_code=503, detail="Service Unavailable (Broker Down)"
+            )
+    else:
+        background_tasks.add_task(process_incident, payload.model_dump(), incident_id)
+
+    return {"status": "processing", "incident_id": incident_id}
