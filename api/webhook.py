@@ -2,6 +2,7 @@ import hmac
 import hashlib
 import logging
 import uuid
+from datetime import datetime, timezone
 from fastapi import APIRouter, BackgroundTasks, Request, HTTPException
 from pydantic import BaseModel, Field
 from typing import List, Dict, Any, Optional
@@ -62,10 +63,7 @@ class WebhookPayload(BaseModel):
 
 def _verify_signature(body: bytes, header: Optional[str]) -> bool:
     """Verify Grafana HMAC-SHA256 webhook signature."""
-    if not WEBHOOK_SECRET:
-        logger.warning("WEBHOOK_SECRET not set — signature verification skipped")
-        return True
-    if not header:
+    if not header or not WEBHOOK_SECRET:
         return False
     expected = (
         "sha256=" + hmac.new(WEBHOOK_SECRET.encode(), body, hashlib.sha256).hexdigest()
@@ -76,7 +74,7 @@ def _verify_signature(body: bytes, header: Optional[str]) -> bool:
 MAX_PAYLOAD_SIZE = 1 * 1024 * 1024  # 1MB
 
 
-@router.post("/webhook")
+@router.post("/webhook", status_code=202)
 async def webhook_receiver(request: Request, background_tasks: BackgroundTasks):
     """Receive and validate webhook alerts from Grafana."""
     content_length = request.headers.get("content-length")
@@ -106,6 +104,9 @@ async def webhook_receiver(request: Request, background_tasks: BackgroundTasks):
         try:
             message = payload.model_dump()
             message["incident_id"] = incident_id
+            message["received_at"] = datetime.now(timezone.utc).isoformat()
+            message["source_ip"] = request.client.host if request.client else "unknown"
+
             key = payload.alerts[0].labels.get("alertname", "unknown").encode("utf-8")
             await producer.send_and_wait(
                 topic=KAFKA_INCIDENT_TOPIC, value=message, key=key

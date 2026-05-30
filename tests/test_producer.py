@@ -16,7 +16,7 @@ def test_producer_publish_success(mock_verify, mock_producer):
 
     response = client.post("/webhook", json=payload)
 
-    assert response.status_code == 200
+    assert response.status_code == 202
     assert response.json()["status"] == "processing"
 
     # Assert producer was called with correct topic and key

@@ -164,7 +164,7 @@ core/
   engine.py       ← Async orchestration of playbook action sequence
   log_config.py   ← Custom structured JSON logging and formatting
 workers/
-  incident_consumer.py ← Standalone Kafka consumer with Idempotency & DLQ
+  incident_consumer.py ← Standalone Kafka consumer with Idempotency, DLQ, and Prometheus metrics (Port 8000)
 services/
   grafana.py      ← Prometheus metric queries + Playwright screenshots
   ai.py           ← Google Gemini integration

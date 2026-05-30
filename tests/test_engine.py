@@ -40,10 +40,21 @@ async def test_process_incident_with_playbook(
     mock_load_playbook.assert_called_once_with("HighCPUUsage")
     # Check metric was fetched
     mock_fetch_metric.assert_called_once()
-    # Check AI analysis was called
+
+    # Deep Assertion: Check AI analysis was called with correct context
     mock_get_ai.assert_called_once()
-    # Check email was sent
+    ai_args, ai_kwargs = mock_get_ai.call_args
+    assert "HighCPUUsage" in ai_args[0]
+    assert "85%" in ai_args[1]  # Enriched data should contain the fetched metric
+
+    # Deep Assertion: Check email was sent with correct structured report
     mock_send_email.assert_called_once()
+    email_args, email_kwargs = mock_send_email.call_args
+    assert "Incident Report: HighCPUUsage" in email_args[0]
+    email_body = email_args[1]
+    assert "CPU over 90%" in email_body  # Summary
+    assert "85%" in email_body  # Live Context
+    assert "AI Insight" in email_body  # RCA
 
 
 @pytest.mark.asyncio
@@ -110,6 +121,14 @@ async def test_process_incident_with_new_integrations(
 
     # Check playbook loaded
     mock_load_playbook.assert_called_once_with("TestAlert")
-    # Check new integrations were triggered
+    # Deep Assertion: Check Slack payload
     mock_send_slack.assert_called_once()
+    slack_args, slack_kwargs = mock_send_slack.call_args
+    assert "Alert summary" in slack_args[0]
+    assert slack_kwargs["title"] == "Incident Alert: TestAlert"
+
+    # Deep Assertion: Check Jira payload
     mock_create_jira.assert_called_once()
+    jira_args, jira_kwargs = mock_create_jira.call_args
+    assert jira_kwargs["summary"] == "[TestAlert] Incident Alert"
+    assert "Alert summary" in jira_kwargs["description"]

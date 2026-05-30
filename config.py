@@ -52,6 +52,7 @@ _REQUIRED = [
     "EMAIL_PASSWORD",
     "GRAFANA_TOKEN",
     "GRAFANA_URL",
+    "WEBHOOK_SECRET",
 ]
 
 _missing = [name for name in _REQUIRED if not os.getenv(name)]

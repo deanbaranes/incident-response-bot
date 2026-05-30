@@ -61,6 +61,7 @@ jobs:
           EMAIL_PASSWORD: dummy
           GRAFANA_TOKEN: dummy
           GRAFANA_URL: http://localhost:3000
+          WEBHOOK_SECRET: dummy
 
   docker:
     name: Docker build

@@ -37,3 +37,23 @@ def test_capture_dashboard_ssrf_naive_bypass():
         "https://dinbaranes.grafana.net.attacker.com/dash", "out.png"
     )
     assert result is None
+
+
+def test_fetch_grafana_metric_blocked_range():
+    """Test PromQL regex validation blocks years, weeks, and days."""
+    result_year = fetch_grafana_metric("CPU", "avg_over_time(cpu[1y])")
+    assert "Blocked: Time range too large" in result_year
+
+    result_week = fetch_grafana_metric("CPU", "rate(errors[52w])")
+    assert "Blocked: Time range too large" in result_week
+
+    result_day = fetch_grafana_metric("CPU", "sum(cpu[ 10 d ])")
+    assert "Blocked: Time range too large" in result_day
+
+    # Hours should be allowed
+    with patch("services.grafana.requests.get") as mock_get:
+        mock_response = MagicMock()
+        mock_response.json.return_value = {"data": {"result": []}}
+        mock_get.return_value = mock_response
+        result_hour = fetch_grafana_metric("CPU", "avg_over_time(cpu[5h])")
+        assert result_hour == "No active data points found."

@@ -2,6 +2,7 @@ import requests
 import logging
 import math
 import urllib.parse
+import re
 from playwright.sync_api import sync_playwright
 from config import GRAFANA_URL, GRAFANA_TOKEN, GRAFANA_PROMETHEUS_DATASOURCE_ID
 
@@ -28,12 +29,13 @@ def fetch_grafana_metric(target_name, query):
     try:
         logger.info(f"Fetching metric: {target_name}")
 
-        # Check 1: Input Validation - prevent massive time range queries
-        if "range" in query or "1y" in query:
+        # Check 1: Input Validation - prevent massive time range queries using Regex
+        # Blocks any range vector using 'd' (days), 'w' (weeks), or 'y' (years) e.g., [1d], [2w]
+        if re.search(r"\[\s*\d+\s*[ywd]\s*\]", query, re.IGNORECASE):
             logger.warning(
                 f"BLOCKED: Query for '{target_name}' exceeds maximum allowed time range."
             )
-            return "Blocked: Time range too large."
+            return "Blocked: Time range too large (only hours/minutes allowed)."
 
         # Check 2: Sanitize query string to prevent basic injections
         safe_query = query.replace(";", "").strip()

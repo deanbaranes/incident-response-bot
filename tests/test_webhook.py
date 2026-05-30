@@ -37,7 +37,7 @@ def test_webhook_valid_payload(mock_process):
     }
 
     response = client.post("/webhook", content=payload_bytes, headers=headers)
-    assert response.status_code == 200
+    assert response.status_code == 202
 
 
 @patch("api.webhook.WEBHOOK_SECRET", DUMMY_SECRET)

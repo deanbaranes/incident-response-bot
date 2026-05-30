@@ -9,3 +9,4 @@ Pillow
 python-json-logger
 aiokafka
 prometheus-fastapi-instrumentator
+prometheus-client

@@ -5,7 +5,8 @@ import asyncio
 import logging
 import signal
 from aiokafka import AIOKafkaConsumer  # type: ignore
-from typing import Set
+from collections import OrderedDict
+from prometheus_client import start_http_server, Counter
 
 # Add project root to sys.path so we can import modules
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -24,6 +25,15 @@ from aiokafka.producer import AIOKafkaProducer  # type: ignore
 setup_logging()
 logger = logging.getLogger("incident_consumer")
 
+# Prometheus Metrics
+MESSAGES_PROCESSED = Counter(
+    "incident_bot_messages_processed_total",
+    "Total number of messages processed successfully",
+)
+DLQ_MESSAGES = Counter(
+    "incident_bot_dlq_messages_total", "Total number of messages sent to DLQ"
+)
+
 is_running = True
 
 
@@ -33,23 +43,20 @@ def handle_shutdown(sig, frame):
     is_running = False
 
 
-# Simple in-memory cache for idempotency
-# In a real distributed system, use Redis or Memcached
-processed_incidents: Set[str] = set()
+# Simple in-memory LRU cache for idempotency
+# Prevents memory leak by capping size to 10,000 items
+MAX_CACHE_SIZE = 10000
+processed_incidents: OrderedDict[str, bool] = OrderedDict()
 
 
 async def send_to_dlq(producer, message_value, error_msg):
     try:
-        # Inject error message into the payload for debugging
-        try:
-            dlq_payload = json.loads(message_value)
-            dlq_payload["_dlq_error"] = str(error_msg)
-            payload_bytes = json.dumps(dlq_payload).encode("utf-8")
-        except json.JSONDecodeError:
-            # If it's not even valid JSON
-            payload_bytes = message_value
-
-        await producer.send_and_wait(topic=KAFKA_DLQ_TOPIC, value=payload_bytes)
+        # Use Kafka Headers for DLQ exception traces as per Phase 5 spec
+        headers = [("error", str(error_msg).encode("utf-8"))]
+        await producer.send_and_wait(
+            topic=KAFKA_DLQ_TOPIC, value=message_value, headers=headers
+        )
+        DLQ_MESSAGES.inc()
         logger.info("Sent failed message to DLQ.")
     except Exception as e:
         logger.error(f"Failed to send to DLQ: {e}")
@@ -61,6 +68,13 @@ async def consume():
         return
 
     logger.info(f"Starting Kafka Consumer for topic: {KAFKA_INCIDENT_TOPIC}")
+
+    # Start Prometheus metrics server on port 8000 for the worker container
+    try:
+        start_http_server(8000)
+        logger.info("Prometheus metrics server started on port 8000")
+    except Exception as e:
+        logger.warning(f"Could not start Prometheus metrics server: {e}")
 
     consumer = AIOKafkaConsumer(
         KAFKA_INCIDENT_TOPIC,
@@ -109,10 +123,13 @@ async def consume():
                 await process_incident(payload, incident_id)
 
                 if incident_id:
-                    processed_incidents.add(incident_id)
+                    processed_incidents[incident_id] = True
+                    if len(processed_incidents) > MAX_CACHE_SIZE:
+                        processed_incidents.popitem(last=False)  # Remove oldest item
 
                 # Commit only on success
                 await consumer.commit()
+                MESSAGES_PROCESSED.inc()
                 logger.info(f"Successfully processed and committed offset {msg.offset}")
 
             except Exception as e:
