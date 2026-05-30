@@ -3,6 +3,7 @@ import sys
 import json
 import asyncio
 import logging
+import signal
 from aiokafka import AIOKafkaConsumer  # type: ignore
 from typing import Set
 
@@ -17,11 +18,20 @@ from config import (
     USE_KAFKA_QUEUE,
 )
 from core.engine import process_incident
-from core.log_config import setup_logging
+from core.log_config import setup_logging, incident_id_var
 from aiokafka.producer import AIOKafkaProducer  # type: ignore
 
 setup_logging()
 logger = logging.getLogger("incident_consumer")
+
+is_running = True
+
+
+def handle_shutdown(sig, frame):
+    global is_running
+    logger.info("Received termination signal. Starting graceful shutdown...")
+    is_running = False
+
 
 # Simple in-memory cache for idempotency
 # In a real distributed system, use Redis or Memcached
@@ -65,14 +75,28 @@ async def consume():
     await consumer.start()
     await dlq_producer.start()
 
+    # Register signal handlers for graceful shutdown
+    try:
+        signal.signal(signal.SIGINT, handle_shutdown)
+        signal.signal(signal.SIGTERM, handle_shutdown)
+    except NotImplementedError:
+        pass  # Windows might not support all signals
+
     try:
         async for msg in consumer:
+            if not is_running:
+                logger.info("Shutdown requested. Breaking consumer loop gracefully...")
+                break
+
             logger.info(
                 f"Received message from partition {msg.partition} at offset {msg.offset}"
             )
             try:
                 payload = json.loads(msg.value.decode("utf-8"))
                 incident_id = payload.get("incident_id")
+
+                if incident_id:
+                    incident_id_var.set(incident_id)
 
                 if incident_id and incident_id in processed_incidents:
                     logger.warning(

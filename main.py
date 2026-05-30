@@ -4,6 +4,7 @@ import config  # noqa: F401 — imported for startup env-var validation side-eff
 from fastapi import FastAPI
 from contextlib import asynccontextmanager
 from api.webhook import router as webhook_router, init_producer, close_producer
+from prometheus_fastapi_instrumentator import Instrumentator
 
 from core.log_config import setup_logging
 
@@ -20,6 +21,9 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(lifespan=lifespan)
 app.include_router(webhook_router)
+
+# Instrument the app to expose /metrics for Prometheus
+Instrumentator().instrument(app).expose(app)
 
 if __name__ == "__main__":
     import uvicorn

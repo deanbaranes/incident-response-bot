@@ -8,3 +8,4 @@ google-generativeai
 Pillow
 python-json-logger
 aiokafka
+prometheus-fastapi-instrumentator

@@ -12,6 +12,7 @@ Grafana alert → webhook → fetch metrics + screenshot → Gemini AI RCA → e
 - **Live metric enrichment** — queries Prometheus directly so the report reflects the moment of the alert, not stale averages
 - **Visual context** — headless Playwright captures a Grafana dashboard screenshot and attaches it to the report
 - **AI root cause analysis** — Google Gemini analyzes metrics + screenshot and outputs 3 actionable troubleshooting steps
+- **Scalable Message Queue** — Integrates with Kafka for decoupled, highly available, and idempotent incident processing with a Dead Letter Queue (DLQ)
 - **Multi-channel notifications** — Built-in support for Email, Slack, Jira, PagerDuty, OpsGenie, and Grafana OnCall
 - **Structured Logging** — JSON-based structured logging with unique `incident_id` for end-to-end tracebility
 - **Webhook authentication** — HMAC-SHA256 signature verification (Grafana-native)
@@ -69,8 +70,10 @@ curl -X POST http://localhost:5000/webhook \
 
 ## Docker
 
+The recommended way to run the bot is via Docker Compose, which spins up the API, a Kafka broker (KRaft mode), and the asynchronous background worker.
+
 ```bash
-cp .env.example .env  # fill in values
+cp .env.example .env  # fill in values (set USE_KAFKA_QUEUE=true)
 docker-compose up
 ```
 
@@ -97,6 +100,11 @@ All configuration is via environment variables. Copy [`.env.example`](.env.examp
 | `JIRA_PROJECT_KEY`| No | — | Key of the Jira project to create tickets in (e.g., KAN) |
 | `JIRA_USER` | No | — | Jira user email |
 | `JIRA_API_TOKEN` | No | — | Jira API token for authentication |
+| `USE_KAFKA_QUEUE` | No | `false` | Set to `true` to enable Kafka decoupled webhook processing |
+| `KAFKA_BOOTSTRAP_SERVERS` | No | `kafka:9092` | Kafka broker addresses |
+| `KAFKA_INCIDENT_TOPIC` | No | `incident.webhooks` | Topic for incoming incidents |
+| `KAFKA_CONSUMER_GROUP` | No | `incident-responder` | Consumer group ID for the worker |
+| `KAFKA_DLQ_TOPIC` | No | `incident.webhooks.dlq` | Dead Letter Queue for failed incidents |
 
 ## Playbooks
 
@@ -151,10 +159,12 @@ If no playbook matches the alert name, the bot runs a text-only AI analysis and 
 
 ```
 api/
-  webhook.py      ← FastAPI endpoint, HMAC auth, Pydantic validation
+  webhook.py      ← FastAPI endpoint, acts as a fast Kafka Producer
 core/
-  engine.py       ← Orchestrates playbook action sequence
+  engine.py       ← Async orchestration of playbook action sequence
   log_config.py   ← Custom structured JSON logging and formatting
+workers/
+  incident_consumer.py ← Standalone Kafka consumer with Idempotency & DLQ
 services/
   grafana.py      ← Prometheus metric queries + Playwright screenshots
   ai.py           ← Google Gemini integration

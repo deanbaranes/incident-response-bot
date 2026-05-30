@@ -91,14 +91,12 @@ async def process_incident(data, incident_id=None):
                     enriched_data += f"- [Metric] {target}: {metric_val}\n"
                     execution_steps += f"Enrichment: {target} metrics retrieved.\n"
 
-                # AI Root Cause Analysis
                 elif action_type == "ai_analysis":
                     logger.info("Running AI analysis...")
                     ai_output = await asyncio.to_thread(
                         get_ai_analysis,
                         alert_name,
                         enriched_data,
-                        screenshot_path,
                         instruction=playbook_instruction,
                     )
                     execution_steps += "AI Analysis completed successfully.\n"
@@ -107,12 +105,12 @@ async def process_incident(data, incident_id=None):
                 elif action_type == "send_notification":
                     report_body = (
                         f"INCIDENT REPORT: {alert_name}\n"
-                        f"{'='*40}\n"
+                        f"{'=' * 40}\n"
                         f"CRITICAL SUMMARY:\n{summary}\n\n"
                         f"AUTOMATED EXECUTION LOG:\n{execution_steps}\n"
                         f"LIVE SYSTEM CONTEXT:\n{enriched_data}\n"
                         f"AI RECOMMENDATIONS & RCA:\n{ai_output}\n"
-                        f"{'='*40}\n"
+                        f"{'=' * 40}\n"
                         f"Status: This report was generated automatically by the AI-Responder Bot."
                     )
 
@@ -157,6 +155,7 @@ async def process_incident(data, incident_id=None):
                         send_slack_alert,
                         slack_message,
                         title=f"Incident Alert: {alert_name}",
+                        screenshot_path=screenshot_path,
                     )
                     execution_steps += "Notification: Slack alert dispatched.\n"
 
@@ -210,9 +209,7 @@ async def process_incident(data, incident_id=None):
 
         else:
             logger.warning(f"No playbook for '{alert_name}'. Using fallback.")
-            ai_output = await asyncio.to_thread(
-                get_ai_analysis, alert_name, summary, screenshot_path=None
-            )
+            ai_output = await asyncio.to_thread(get_ai_analysis, alert_name, summary)
 
             fallback_subject = f"[Alert] {alert_name} (No Playbook Found)"
             fallback_content = f"AI Insight (Text Analysis): {ai_output}\n\nPlease define a YAML playbook for this alert type if you want screenshots or deeper analysis."

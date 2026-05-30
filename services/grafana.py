@@ -83,14 +83,20 @@ def fetch_grafana_metric(target_name, query):
 # Uses a smart wait for the '.panel-content' to ensure charts are rendered
 def capture_dashboard(url, output_path):
     """Take a screenshot of a Grafana dashboard."""
-    # SSRF Protection: Validate the URL belongs to our Grafana instance
-    parsed_target = urllib.parse.urlparse(url)
-    parsed_base = urllib.parse.urlparse(GRAFANA_URL)
+    # SSRF Protection: Strict domain whitelisting
+    try:
+        parsed_target = urllib.parse.urlparse(url)
+        parsed_base = urllib.parse.urlparse(GRAFANA_URL)
 
-    if parsed_target.netloc != parsed_base.netloc:
-        logger.error(
-            f"SSRF Protection triggered: blocked access to external host '{parsed_target.netloc}'"
-        )
+        ALLOWED_DOMAINS = [parsed_base.hostname]
+
+        if not parsed_target.hostname or parsed_target.hostname not in ALLOWED_DOMAINS:
+            logger.error(
+                f"SSRF Protection triggered: blocked access to un-whitelisted host '{parsed_target.hostname}'"
+            )
+            return None
+    except Exception as e:
+        logger.error(f"Invalid URL provided for dashboard: {e}")
         return None
 
     try:

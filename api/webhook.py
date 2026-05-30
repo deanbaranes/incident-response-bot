@@ -30,6 +30,10 @@ async def init_producer():
             producer = AIOKafkaProducer(
                 bootstrap_servers=KAFKA_BOOTSTRAP_SERVERS,
                 value_serializer=lambda v: json.dumps(v).encode("utf-8"),
+                acks="all",
+                enable_idempotence=True,
+                linger_ms=5,
+                compression_type="zstd",
             )
             await producer.start()
             logger.info("Kafka Producer started.")
@@ -69,9 +73,17 @@ def _verify_signature(body: bytes, header: Optional[str]) -> bool:
     return hmac.compare_digest(expected, header)
 
 
+MAX_PAYLOAD_SIZE = 1 * 1024 * 1024  # 1MB
+
+
 @router.post("/webhook")
 async def webhook_receiver(request: Request, background_tasks: BackgroundTasks):
     """Receive and validate webhook alerts from Grafana."""
+    content_length = request.headers.get("content-length")
+    if content_length and int(content_length) > MAX_PAYLOAD_SIZE:
+        logger.warning(f"Rejected webhook: payload too large ({content_length} bytes)")
+        raise HTTPException(status_code=413, detail="Payload Too Large")
+
     body = await request.body()
 
     # Verify HMAC signature for security

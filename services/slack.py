@@ -5,8 +5,14 @@ from config import SLACK_WEBHOOK_URL
 logger = logging.getLogger(__name__)
 
 
-def send_slack_alert(message: str, title: str = "Incident Alert") -> bool:
+def send_slack_alert(
+    message: str, title: str = "Incident Alert", screenshot_path: str | None = None
+) -> bool:
     """Send an alert to Slack via Incoming Webhook."""
+
+    if screenshot_path:
+        message += f"\n\n📎 *Visual Evidence*: A screenshot was captured and saved locally at: `{screenshot_path}`"
+
     if not SLACK_WEBHOOK_URL:
         # Fallback Mock if webhook is not configured
         logger.info(f"MOCK SLACK ALERT: Title: {title} | Message: {message[:100]}...")

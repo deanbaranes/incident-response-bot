@@ -71,10 +71,45 @@ async def test_process_incident_fallback(
 
     mock_load_playbook.assert_called_once_with("UnknownAlert")
     # AI should still be called
-    mock_get_ai.assert_called_once_with(
-        "UnknownAlert", "Something went wrong", screenshot_path=None
-    )
+    mock_get_ai.assert_called_once_with("UnknownAlert", "Something went wrong")
     # Email should still be sent with fallback subject
     mock_send_email.assert_called_once()
     args, kwargs = mock_send_email.call_args
     assert "No Playbook Found" in args[0]
+
+
+@pytest.mark.asyncio
+@patch("core.engine.load_playbook")
+@patch("core.engine.send_slack_alert")
+@patch("core.engine.create_jira_ticket")
+@patch("core.engine.get_ai_analysis")
+async def test_process_incident_with_new_integrations(
+    mock_get_ai, mock_create_jira, mock_send_slack, mock_load_playbook
+):
+    """Test process_incident routing for Slack and Jira actions."""
+    mock_load_playbook.return_value = {
+        "name": "Integration Playbook",
+        "actions": [
+            {"type": "send_slack_notification"},
+            {"type": "create_jira_ticket"},
+        ],
+    }
+    mock_get_ai.return_value = "AI Insight"
+
+    payload = {
+        "alerts": [
+            {
+                "status": "firing",
+                "labels": {"alertname": "TestAlert"},
+                "annotations": {"summary": "Alert summary"},
+            }
+        ]
+    }
+
+    await process_incident(payload)
+
+    # Check playbook loaded
+    mock_load_playbook.assert_called_once_with("TestAlert")
+    # Check new integrations were triggered
+    mock_send_slack.assert_called_once()
+    mock_create_jira.assert_called_once()
