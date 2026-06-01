@@ -192,6 +192,10 @@ main.py           ← FastAPI app entry point
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) (coming soon). PRs welcome — especially new playbook examples and advanced AI workflows.
 
+## Known Limitations
+
+- **Idempotency**: We employ an at-least-once delivery model with a 1-hour in-memory TTL deduplication cache. In the event of a worker crash after processing an alert but before committing the offset to Kafka, duplicate deliveries (e.g., duplicate emails or screenshots) are possible upon restart. This is an acceptable known behavior for v1. Full exactly-once processing (e.g., via a transactional outbox) may be implemented in future versions if needed.
+
 ## Security
 
 See [SECURITY.md](SECURITY.md) for the threat model and vulnerability reporting process.

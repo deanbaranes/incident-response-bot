@@ -5,7 +5,7 @@ import asyncio
 import logging
 import signal
 from aiokafka import AIOKafkaConsumer  # type: ignore
-from collections import OrderedDict
+from cachetools import TTLCache
 from prometheus_client import start_http_server, Counter
 
 # Add project root to sys.path so we can import modules
@@ -43,10 +43,10 @@ def handle_shutdown(sig, frame):
     is_running = False
 
 
-# Simple in-memory LRU cache for idempotency
+# Simple in-memory LRU cache for idempotency with 1-hour TTL
 # Prevents memory leak by capping size to 10,000 items
 MAX_CACHE_SIZE = 10000
-processed_incidents: OrderedDict[str, bool] = OrderedDict()
+processed_incidents: TTLCache = TTLCache(maxsize=MAX_CACHE_SIZE, ttl=3600)
 
 
 async def send_to_dlq(producer, message_value, error_msg):
@@ -124,8 +124,6 @@ async def consume():
 
                 if incident_id:
                     processed_incidents[incident_id] = True
-                    if len(processed_incidents) > MAX_CACHE_SIZE:
-                        processed_incidents.popitem(last=False)  # Remove oldest item
 
                 # Commit only on success
                 await consumer.commit()
