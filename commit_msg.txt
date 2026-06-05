@@ -1,0 +1,9 @@
+Feat: Add Grafana Query Language Support in Playbooks (#18)
+
+Added support for executing queries against any Grafana-configured data source (Prometheus, Loki, SQL, etc.) directly from playbook files.
+
+What was done:
+1. New Action Type: Added support for the `grafana_query` action type within the bot's core engine.
+2. Unified Data Source Integration: Created a new function that utilizes the Grafana Proxy (`/api/ds/query`) to fetch data, eliminating the need to write separate clients for each database type.
+3. Dynamic Variables: Added the ability to use environment variables (e.g., for the Datasource UID) and dynamically inject alert metadata (like pod or service names) directly into the query string at runtime.
+4. AI Protection & Context Limits: The bot now parses and cleans the raw JSON response from Grafana, sending only the relevant rows to the AI. The extracted text is capped at 15,000 characters to prevent overloading the LLM context window.

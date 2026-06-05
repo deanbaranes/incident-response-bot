@@ -121,3 +121,100 @@ def capture_dashboard(url, output_path):
     except Exception as e:
         logger.error(f"Failed to capture screenshot: {e}")
         return None
+
+
+def execute_grafana_query(datasource_uid, query, time_from="now-15m", time_to="now"):
+    """Execute a generic query against any Grafana datasource using the /api/ds/query endpoint."""
+    headers = {
+        "Content-Type": "application/json",
+        "Authorization": f"Bearer {GRAFANA_TOKEN}",
+    }
+
+    if not GRAFANA_URL:
+        return "Error: GRAFANA_URL is not configured"
+
+    base_url = GRAFANA_URL.rstrip("/")
+    api_url = f"{base_url}/api/ds/query"
+
+    payload = {
+        "queries": [
+            {
+                "refId": "A",
+                "datasource": {"uid": datasource_uid},
+                "expr": query,
+            }
+        ],
+        "from": time_from,
+        "to": time_to,
+    }
+
+    try:
+        logger.info(f"Executing Grafana query against datasource: {datasource_uid}")
+
+        response = requests.post(
+            api_url,
+            headers=headers,
+            json=payload,
+            timeout=30,
+        )
+        response.raise_for_status()
+        data = response.json()
+
+        results = data.get("results", {})
+        query_a_result = results.get("A", {})
+        frames = query_a_result.get("frames", [])
+
+        if not frames:
+            return "Grafana Query returned successfully with NO data/rows found."
+
+        # Parse frames to text to save context window space
+        formatted_output = []
+        for frame in frames:
+            schema_fields = frame.get("schema", {}).get("fields", [])
+            column_names = [f.get("name", "unknown") for f in schema_fields]
+
+            data_values = frame.get("data", {}).get("values", [])
+
+            if not column_names or not data_values:
+                continue
+
+            # data_values is typically a list of columns (each column is a list of row values)
+            # e.g. [[t1, t2], [v1, v2]]
+            # We want to transpose it to rows
+            try:
+                rows = list(zip(*data_values))
+                if not rows:
+                    continue
+
+                formatted_output.append(f"Columns: {', '.join(column_names)}")
+                for i, row in enumerate(rows):
+                    row_str = " | ".join(str(val) for val in row)
+                    formatted_output.append(row_str)
+
+                    # Prevent building an infinitely large string in memory
+                    if i > 2000:
+                        formatted_output.append("... (truncated rows)")
+                        break
+
+            except Exception as e:
+                logger.warning(f"Failed to parse frame values: {e}")
+
+        if not formatted_output:
+            return "Grafana Query returned successfully with NO data/rows found."
+
+        final_text = "\\n".join(formatted_output)
+
+        # Context window protection: limit to 15,000 characters
+        if len(final_text) > 15000:
+            final_text = (
+                final_text[:15000] + "\\n... (TRUNCATED - reached 15,000 char limit)"
+            )
+
+        return final_text
+
+    except requests.exceptions.RequestException as e:
+        logger.error(f"Connection Failed for Grafana Query: {e}")
+        return f"Connection Failed: {e}"
+    except Exception as e:
+        logger.error(f"Unknown error executing Grafana Query: {e}")
+        return "Unexpected error."

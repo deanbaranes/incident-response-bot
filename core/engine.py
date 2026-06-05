@@ -4,7 +4,11 @@ import logging
 import asyncio
 from config import GRAFANA_DASHBOARD_URL
 from services.playbooks import load_playbook
-from services.grafana import capture_dashboard, fetch_grafana_metric
+from services.grafana import (
+    capture_dashboard,
+    fetch_grafana_metric,
+    execute_grafana_query,
+)
 from services.ai import get_ai_analysis
 from services.email import send_email_report
 from services.slack import send_slack_alert
@@ -90,6 +94,35 @@ async def process_incident(data, incident_id=None):
                     )
                     enriched_data += f"- [Metric] {target}: {metric_val}\n"
                     execution_steps += f"Enrichment: {target} metrics retrieved.\n"
+
+                # Execute Generic Grafana Query
+                elif action_type == "grafana_query":
+                    datasource_uid = action.get("datasource_uid", "")
+                    query = action.get("query", "")
+                    time_range = action.get("time_range", "now-15m")
+
+                    # 1. Environment Variable Resolution
+                    if datasource_uid.startswith("$"):
+                        datasource_uid = os.path.expandvars(datasource_uid)
+
+                    # 2. Dynamic Variable Injection
+                    alert_vars = {
+                        **alert.get("labels", {}),
+                        **alert.get("annotations", {}),
+                    }
+                    for k, v in alert_vars.items():
+                        query = query.replace(f"${{{k}}}", str(v))
+
+                    logger.info(f"Executing Grafana Query on DS: {datasource_uid}")
+                    query_result = await asyncio.to_thread(
+                        execute_grafana_query,
+                        datasource_uid,
+                        query,
+                        time_from=time_range,
+                    )
+
+                    enriched_data += f"- [Grafana Query Results]\n{query_result}\n\n"
+                    execution_steps += "Enrichment: Grafana generic query executed.\n"
 
                 elif action_type == "ai_analysis":
                     logger.info("Running AI analysis...")
