@@ -5,12 +5,18 @@ import urllib.parse
 import re
 from playwright.sync_api import sync_playwright
 from config import GRAFANA_URL, GRAFANA_TOKEN, GRAFANA_PROMETHEUS_DATASOURCE_ID
+from tenacity import retry, stop_after_attempt, wait_exponential
 
 logger = logging.getLogger(__name__)
 
 
 # Fetches raw metric numbers from Prometheus based on a custom query
 # This provides the AI and the final report with live data context
+@retry(
+    stop=stop_after_attempt(3),
+    wait=wait_exponential(multiplier=1, min=2, max=10),
+    reraise=True,
+)
 def fetch_grafana_metric(target_name, query):
     """Fetch live data from Prometheus API."""
     # Use Bearer authentication with the Grafana Token (required for proxy access)
@@ -75,10 +81,7 @@ def fetch_grafana_metric(target_name, query):
 
     except requests.exceptions.RequestException as e:
         logger.error(f"Connection Failed for '{target_name}': {e}")
-        return f"Connection Failed: {e}"
-    except Exception as e:
-        logger.error(f"Unknown error fetching '{target_name}': {e}")
-        return "Unexpected error."
+        raise e
 
 
 # Captures a snapshot of a Grafana dashboard using Playwright
@@ -123,6 +126,11 @@ def capture_dashboard(url, output_path):
         return None
 
 
+@retry(
+    stop=stop_after_attempt(3),
+    wait=wait_exponential(multiplier=1, min=2, max=10),
+    reraise=True,
+)
 def execute_grafana_query(datasource_uid, query, time_from="now-15m", time_to="now"):
     """Execute a generic query against any Grafana datasource using the /api/ds/query endpoint."""
     headers = {
@@ -214,7 +222,4 @@ def execute_grafana_query(datasource_uid, query, time_from="now-15m", time_to="n
 
     except requests.exceptions.RequestException as e:
         logger.error(f"Connection Failed for Grafana Query: {e}")
-        return f"Connection Failed: {e}"
-    except Exception as e:
-        logger.error(f"Unknown error executing Grafana Query: {e}")
-        return "Unexpected error."
+        raise e

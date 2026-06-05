@@ -11,3 +11,5 @@ aiokafka
 prometheus-fastapi-instrumentator
 prometheus-client
 cachetools
+pydantic-settings
+tenacity

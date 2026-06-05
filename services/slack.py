@@ -1,10 +1,16 @@
 import logging
 import requests
 from config import SLACK_WEBHOOK_URL
+from tenacity import retry, stop_after_attempt, wait_exponential
 
 logger = logging.getLogger(__name__)
 
 
+@retry(
+    stop=stop_after_attempt(3),
+    wait=wait_exponential(multiplier=1, min=2, max=10),
+    reraise=True,
+)
 def send_slack_alert(
     message: str, title: str = "Incident Alert", screenshot_path: str | None = None
 ) -> bool:
@@ -20,11 +26,7 @@ def send_slack_alert(
 
     payload = {"text": f"*{title}*\n{message}"}
 
-    try:
-        response = requests.post(SLACK_WEBHOOK_URL, json=payload, timeout=10)
-        response.raise_for_status()
-        logger.info(f"Successfully sent Slack alert: {title}")
-        return True
-    except requests.exceptions.RequestException as e:
-        logger.error(f"Failed to send Slack alert: {e}")
-        return False
+    response = requests.post(SLACK_WEBHOOK_URL, json=payload, timeout=10)
+    response.raise_for_status()
+    logger.info(f"Successfully sent Slack alert: {title}")
+    return True

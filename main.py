@@ -1,6 +1,5 @@
 import logging
-
-import config  # noqa: F401 — imported for startup env-var validation side-effect
+import core.settings  # noqa: F401 — imported for startup env-var validation side-effect
 from fastapi import FastAPI
 from contextlib import asynccontextmanager
 from api.webhook import router as webhook_router, init_producer, close_producer

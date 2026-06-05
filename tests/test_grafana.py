@@ -1,3 +1,4 @@
+import pytest
 from unittest.mock import patch, MagicMock
 import requests
 from services.grafana import (
@@ -23,9 +24,8 @@ def test_fetch_grafana_metric_timeout(mock_get):
     """Test when requests raises a Timeout exception."""
     mock_get.side_effect = requests.exceptions.Timeout("Connection timed out")
 
-    result = fetch_grafana_metric("CPU", "avg(cpu)")
-    assert "Connection Failed" in result
-    assert "Connection timed out" in result
+    with pytest.raises(requests.exceptions.Timeout):
+        fetch_grafana_metric("CPU", "avg(cpu)")
 
 
 def test_capture_dashboard_ssrf_malicious_domain():
@@ -103,6 +103,5 @@ def test_execute_grafana_query_timeout(mock_post):
     """Test when requests raises a Timeout exception for grafana query."""
     mock_post.side_effect = requests.exceptions.Timeout("Connection timed out")
 
-    result = execute_grafana_query("my-uid", "avg(metric)")
-    assert "Connection Failed" in result
-    assert "Connection timed out" in result
+    with pytest.raises(requests.exceptions.Timeout):
+        execute_grafana_query("my-uid", "avg(metric)")

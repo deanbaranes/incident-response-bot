@@ -5,10 +5,10 @@ from core.engine import process_incident
 
 @pytest.mark.asyncio
 @patch("core.engine.load_playbook")
-@patch("core.engine.capture_dashboard")
-@patch("core.engine.fetch_grafana_metric")
-@patch("core.engine.get_ai_analysis")
-@patch("core.engine.send_email_report")
+@patch("core.actions.handlers.grafana.capture_dashboard")
+@patch("core.actions.handlers.grafana.fetch_grafana_metric")
+@patch("core.actions.handlers.notifications.get_ai_analysis")
+@patch("core.actions.handlers.notifications.send_email_report")
 async def test_process_incident_with_playbook(
     mock_send_email, mock_get_ai, mock_fetch_metric, mock_capture, mock_load_playbook
 ):
@@ -91,9 +91,9 @@ async def test_process_incident_fallback(
 
 @pytest.mark.asyncio
 @patch("core.engine.load_playbook")
-@patch("core.engine.send_slack_alert")
-@patch("core.engine.create_jira_ticket")
-@patch("core.engine.get_ai_analysis")
+@patch("core.actions.handlers.notifications.send_slack_alert")
+@patch("core.actions.handlers.ticketing.create_jira_ticket")
+@patch("core.actions.handlers.notifications.get_ai_analysis")
 async def test_process_incident_with_new_integrations(
     mock_get_ai, mock_create_jira, mock_send_slack, mock_load_playbook
 ):
