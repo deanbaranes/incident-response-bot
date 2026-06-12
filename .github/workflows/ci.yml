@@ -52,7 +52,7 @@ jobs:
       - name: Run tests
         run: pytest tests/ -v --tb=short
         env:
-          # Provide dummy values so config.py fail-fast doesn't block test runs.
+          # Provide dummy values so core.settings fail-fast doesn't block test runs.
           # Individual tests mock the services; these are never used for real calls.
           GITHUB_TOKEN: dummy
           GITHUB_REPO: dummy/dummy

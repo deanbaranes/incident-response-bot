@@ -35,11 +35,13 @@ class CreatePagerDutyIncidentHandler(ActionHandler):
         self, action: Dict[str, Any], context: IncidentContext, alert: Dict[str, Any]
     ):
         logger.info("Triggering PagerDuty...")
-        await asyncio.to_thread(
-            create_pagerduty_incident,
-            title=f"Incident: {context.alert_name}",
+        severity = action.get("severity", "critical")
+        title = action.get("title", f"Incident: {context.alert_name}")
+        await create_pagerduty_incident(
+            title=title,
             message=context.summary,
             alert_name=context.alert_name,
+            severity=severity,
         )
         context.add_step("Notification: PagerDuty triggered.")
 
@@ -49,11 +51,13 @@ class SendOpsGenieAlertHandler(ActionHandler):
         self, action: Dict[str, Any], context: IncidentContext, alert: Dict[str, Any]
     ):
         logger.info("Triggering OpsGenie...")
-        await asyncio.to_thread(
-            send_opsgenie_alert,
-            title=f"Incident: {context.alert_name}",
+        priority = action.get("priority", "P3")
+        title = action.get("title", f"Incident: {context.alert_name}")
+        await send_opsgenie_alert(
+            title=title,
             message=context.summary,
             alert_name=context.alert_name,
+            priority=priority,
         )
         context.add_step("Notification: OpsGenie triggered.")
 
@@ -63,9 +67,9 @@ class SendGrafanaOnCallAlertHandler(ActionHandler):
         self, action: Dict[str, Any], context: IncidentContext, alert: Dict[str, Any]
     ):
         logger.info("Triggering Grafana OnCall...")
-        await asyncio.to_thread(
-            send_grafana_oncall_alert,
-            title=f"Incident: {context.alert_name}",
+        title = action.get("title", f"Incident: {context.alert_name}")
+        await send_grafana_oncall_alert(
+            title=title,
             message=context.summary,
             alert_name=context.alert_name,
         )

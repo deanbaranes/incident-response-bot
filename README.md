@@ -100,6 +100,10 @@ All configuration is via environment variables. Copy [`.env.example`](.env.examp
 | `JIRA_PROJECT_KEY`| No | — | Key of the Jira project to create tickets in (e.g., KAN) |
 | `JIRA_USER` | No | — | Jira user email |
 | `JIRA_API_TOKEN` | No | — | Jira API token for authentication |
+| `GRAFANA_ONCALL_WEBHOOK_URL` | No | — | Grafana OnCall Webhook URL |
+| `OPSGENIE_API_KEY` | No | — | OpsGenie API Key (GenieKey) |
+| `OPSGENIE_REGION` | No | `us` | OpsGenie Region (`us` or `eu`) |
+| `PAGERDUTY_ROUTING_KEY` | No | — | PagerDuty Integration/Routing Key |
 | `USE_KAFKA_QUEUE` | No | `false` | Set to `true` to enable Kafka decoupled webhook processing |
 | `KAFKA_BOOTSTRAP_SERVERS` | No | `kafka:9092` | Kafka broker addresses |
 | `KAFKA_INCIDENT_TOPIC` | No | `incident.webhooks` | Topic for incoming incidents |
@@ -135,6 +139,9 @@ actions:
   - type: ai_analysis
 
   - type: send_notification
+
+  - type: send_grafana_oncall_alert
+    title: "High CPU on {{ alert_name }}"
 ```
 
 ### Available action types
@@ -171,9 +178,9 @@ services/
   email.py        ← SMTP delivery
   slack.py        ← Slack webhook integration
   jira.py         ← Jira ticket creation
-  pagerduty.py    ← PagerDuty mocking
-  opsgenie.py     ← OpsGenie mocking
-  grafana_oncall.py ← Grafana OnCall mocking
+  pagerduty.py    ← PagerDuty incident creation
+  opsgenie.py     ← OpsGenie alert triggering
+  grafana_oncall.py ← Grafana OnCall integration
   playbooks.py    ← Playbook retrieval from local directory
 playbooks/        ← Example YAML playbooks
 config.py         ← Env var loading with fail-fast validation

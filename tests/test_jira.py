@@ -4,10 +4,10 @@ from requests.auth import HTTPBasicAuth
 
 
 @patch("services.jira.requests.post")
-@patch("services.jira.JIRA_BASE_URL", "https://test.atlassian.net")
-@patch("services.jira.JIRA_USER", "test@example.com")
-@patch("services.jira.JIRA_API_TOKEN", "token123")
-@patch("services.jira.JIRA_PROJECT_KEY", "TEST")
+@patch("core.settings.settings.JIRA_BASE_URL", "https://test.atlassian.net")
+@patch("core.settings.settings.JIRA_USER", "test@example.com")
+@patch("core.settings.settings.JIRA_API_TOKEN", "token123")
+@patch("core.settings.settings.JIRA_PROJECT_KEY", "TEST")
 def test_create_jira_ticket_payload(mock_post):
     """Test Jira payload generation and authentication."""
     mock_response = MagicMock()

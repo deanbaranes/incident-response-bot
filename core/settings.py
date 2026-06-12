@@ -41,9 +41,10 @@ class Settings(BaseSettings):
     JIRA_API_TOKEN: Optional[str] = None
     JIRA_PROJECT_KEY: Optional[str] = None
 
-    # Other mock integrations
+    # Other integrations
     GRAFANA_ONCALL_WEBHOOK_URL: Optional[str] = None
     OPSGENIE_API_KEY: Optional[str] = None
+    OPSGENIE_REGION: str = "us"
     PAGERDUTY_ROUTING_KEY: Optional[str] = None
 
     # Kafka Settings

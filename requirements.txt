@@ -13,3 +13,4 @@ prometheus-client
 cachetools
 pydantic-settings
 tenacity
+aiosqlite

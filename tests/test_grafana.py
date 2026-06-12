@@ -20,6 +20,17 @@ def test_fetch_grafana_metric_empty(mock_get):
 
 
 @patch("services.grafana.requests.get")
+def test_fetch_grafana_metric_malformed_data(mock_get):
+    """Test when Prometheus returns malformed data without value list."""
+    mock_response = MagicMock()
+    mock_response.json.return_value = {"data": {"result": [{"bad_key": "bad_value"}]}}
+    mock_get.return_value = mock_response
+
+    result = fetch_grafana_metric("CPU", "avg(cpu)")
+    assert result == "Invalid data format received."
+
+
+@patch("services.grafana.requests.get")
 def test_fetch_grafana_metric_timeout(mock_get):
     """Test when requests raises a Timeout exception."""
     mock_get.side_effect = requests.exceptions.Timeout("Connection timed out")

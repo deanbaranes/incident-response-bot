@@ -5,7 +5,7 @@ from main import app
 client = TestClient(app)
 
 
-@patch("api.webhook.USE_KAFKA_QUEUE", True)
+@patch("core.settings.settings.USE_KAFKA_QUEUE", True)
 @patch("api.webhook.producer", new_callable=AsyncMock)
 @patch("api.webhook._verify_signature")
 def test_producer_publish_success(mock_verify, mock_producer):
@@ -26,7 +26,7 @@ def test_producer_publish_success(mock_verify, mock_producer):
     assert kwargs["key"] == b"TestAlert"
 
 
-@patch("api.webhook.USE_KAFKA_QUEUE", True)
+@patch("core.settings.settings.USE_KAFKA_QUEUE", True)
 @patch("api.webhook.producer", new_callable=AsyncMock)
 @patch("api.webhook._verify_signature")
 def test_producer_broker_down(mock_verify, mock_producer):
@@ -43,7 +43,7 @@ def test_producer_broker_down(mock_verify, mock_producer):
     assert response.json()["detail"] == "Service Unavailable (Broker Down)"
 
 
-@patch("api.webhook.USE_KAFKA_QUEUE", False)
+@patch("core.settings.settings.USE_KAFKA_QUEUE", False)
 @patch("api.webhook.producer", new_callable=AsyncMock)
 @patch("api.webhook.process_incident")
 @patch("api.webhook._verify_signature")
@@ -67,7 +67,7 @@ def test_producer_fallback_flag_false(
     # It shouldn't crash, the background task handles it (not easily assertable without mocking FastAPI background tasks directly, but we assert 202)
 
 
-@patch("api.webhook.USE_KAFKA_QUEUE", True)
+@patch("core.settings.settings.USE_KAFKA_QUEUE", True)
 @patch("api.webhook.producer", None)
 @patch("api.webhook.process_incident")
 @patch("api.webhook._verify_signature")
@@ -100,7 +100,7 @@ def test_producer_payload_too_large(mock_verify):
     assert response.status_code == 413
 
 
-@patch("api.webhook.USE_KAFKA_QUEUE", True)
+@patch("core.settings.settings.USE_KAFKA_QUEUE", True)
 @patch("api.webhook.producer", new_callable=AsyncMock)
 @patch("api.webhook._verify_signature")
 def test_producer_missing_alertname(mock_verify, mock_producer):

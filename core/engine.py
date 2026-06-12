@@ -1,5 +1,6 @@
 import logging
 import asyncio
+import os
 from services.playbooks import load_playbook
 from core.log_config import incident_id_var
 from core.context import IncidentContext
@@ -72,3 +73,14 @@ async def process_incident(data, incident_id=None):
                 fallback_content,
                 attachment_path=None,
             )
+
+        # Ensure screenshots are cleaned up regardless of success/failure of individual actions
+        for screenshot_path in context.screenshots:
+            if os.path.exists(screenshot_path):
+                try:
+                    os.remove(screenshot_path)
+                    logger.info(f"Cleaned up screenshot: {screenshot_path}")
+                except Exception as e:
+                    logger.error(
+                        f"Failed to clean up screenshot {screenshot_path}: {e}"
+                    )

@@ -4,7 +4,7 @@ import math
 import urllib.parse
 import re
 from playwright.sync_api import sync_playwright
-from config import GRAFANA_URL, GRAFANA_TOKEN, GRAFANA_PROMETHEUS_DATASOURCE_ID
+from core.settings import settings
 from tenacity import retry, stop_after_attempt, wait_exponential
 
 logger = logging.getLogger(__name__)
@@ -22,15 +22,15 @@ def fetch_grafana_metric(target_name, query):
     # Use Bearer authentication with the Grafana Token (required for proxy access)
     headers = {
         "Content-Type": "application/json",
-        "Authorization": f"Bearer {GRAFANA_TOKEN}",
+        "Authorization": f"Bearer {settings.GRAFANA_TOKEN}",
     }
 
-    if not GRAFANA_URL:
-        return "Error: GRAFANA_URL is not configured"
+    if not settings.GRAFANA_URL:
+        return "Error: settings.GRAFANA_URL is not configured"
 
-    base_url = GRAFANA_URL.rstrip("/")
+    base_url = settings.GRAFANA_URL.rstrip("/")
     # Using the Grafana Proxy to bypass direct Prometheus authentication issues
-    api_url = f"{base_url}/api/datasources/proxy/{GRAFANA_PROMETHEUS_DATASOURCE_ID}/api/v1/query"
+    api_url = f"{base_url}/api/datasources/proxy/{settings.GRAFANA_PROMETHEUS_DATASOURCE_ID}/api/v1/query"
 
     try:
         logger.info(f"Fetching metric: {target_name}")
@@ -91,7 +91,7 @@ def capture_dashboard(url, output_path):
     # SSRF Protection: Strict domain whitelisting
     try:
         parsed_target = urllib.parse.urlparse(url)
-        parsed_base = urllib.parse.urlparse(GRAFANA_URL)
+        parsed_base = urllib.parse.urlparse(settings.GRAFANA_URL)
 
         ALLOWED_DOMAINS = [parsed_base.hostname]
 
@@ -135,13 +135,13 @@ def execute_grafana_query(datasource_uid, query, time_from="now-15m", time_to="n
     """Execute a generic query against any Grafana datasource using the /api/ds/query endpoint."""
     headers = {
         "Content-Type": "application/json",
-        "Authorization": f"Bearer {GRAFANA_TOKEN}",
+        "Authorization": f"Bearer {settings.GRAFANA_TOKEN}",
     }
 
-    if not GRAFANA_URL:
-        return "Error: GRAFANA_URL is not configured"
+    if not settings.GRAFANA_URL:
+        return "Error: settings.GRAFANA_URL is not configured"
 
-    base_url = GRAFANA_URL.rstrip("/")
+    base_url = settings.GRAFANA_URL.rstrip("/")
     api_url = f"{base_url}/api/ds/query"
 
     payload = {

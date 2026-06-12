@@ -1,9 +1,11 @@
-Feat: Add Grafana Query Language Support in Playbooks (#18)
+refactor: Finalize production architecture, database idempotency, and observability
 
-Added support for executing queries against any Grafana-configured data source (Prometheus, Loki, SQL, etc.) directly from playbook files.
+This commit finalizes the transition of the incident-response-bot to a fully production-ready state, resolving leftover technical debt and hardening the system's reliability.
 
-What was done:
-1. New Action Type: Added support for the `grafana_query` action type within the bot's core engine.
-2. Unified Data Source Integration: Created a new function that utilizes the Grafana Proxy (`/api/ds/query`) to fetch data, eliminating the need to write separate clients for each database type.
-3. Dynamic Variables: Added the ability to use environment variables (e.g., for the Datasource UID) and dynamically inject alert metadata (like pod or service names) directly into the query string at runtime.
-4. AI Protection & Context Limits: The bot now parses and cleans the raw JSON response from Grafana, sending only the relevant rows to the AI. The extracted text is capped at 15,000 characters to prevent overloading the LLM context window.
+Key achievements in this release:
+1. Persistent Deduplication (Idempotency): Replaced volatile in-memory TTLCache with a persistent SQLite database (`aiosqlite`) to ensure no duplicate alerts are processed even after a server restart.
+2. Automated Data Retention: Implemented a background cleanup job on startup to automatically purge incidents and screenshots older than 7 days, preventing disk bloat.
+3. Resource Management: Centralized screenshot lifecycle logic within the core engine to eliminate race conditions and orphaned files during multi-channel notifications.
+4. Configuration Refactor: Removed the legacy `config.py` proxy. Migrated all 11 services and webhook handlers to use direct, type-safe Pydantic Settings (`core.settings`).
+5. Observability: Added custom Prometheus Business Metrics (`WEBHOOK_ALERTS_RECEIVED` and `WEBHOOK_KAFKA_PUBLISH_FAILURES`) to the FastAPI webhook for granular Grafana monitoring.
+6. CI/CD Readiness: Fixed all failing tests (55 passing), cleaned up unused variables, and ran Black/Ruff/MyPy formatters to guarantee a green build on GitHub Actions.

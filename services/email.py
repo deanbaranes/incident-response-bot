@@ -5,13 +5,7 @@ from email.mime.multipart import MIMEMultipart
 from email.mime.base import MIMEBase
 from email import encoders
 import logging
-from config import (
-    EMAIL_SENDER,
-    EMAIL_PASSWORD,
-    EMAIL_HOST,
-    EMAIL_PORT,
-    EMAIL_RECIPIENTS,
-)
+from core.settings import settings
 from tenacity import retry, stop_after_attempt, wait_exponential
 
 logger = logging.getLogger(__name__)
@@ -25,9 +19,13 @@ logger = logging.getLogger(__name__)
 )
 def send_email_report(subject, content, attachment_path=None):
     """Send incident report via SMTP."""
-    recipients = EMAIL_RECIPIENTS if EMAIL_RECIPIENTS else [EMAIL_SENDER]
+    recipients = (
+        settings.email_recipients_list
+        if settings.email_recipients_list
+        else [settings.EMAIL_SENDER]
+    )
     msg = MIMEMultipart()
-    msg["From"] = EMAIL_SENDER
+    msg["From"] = settings.EMAIL_SENDER
     msg["To"] = ", ".join(recipients)
     msg["Subject"] = subject
     msg.attach(MIMEText(content, "plain"))
@@ -45,9 +43,9 @@ def send_email_report(subject, content, attachment_path=None):
         )
         msg.attach(part)
 
-    server = smtplib.SMTP(EMAIL_HOST, EMAIL_PORT)
+    server = smtplib.SMTP(settings.EMAIL_HOST, settings.EMAIL_PORT)
     server.starttls()
-    server.login(EMAIL_SENDER, EMAIL_PASSWORD)
-    server.sendmail(EMAIL_SENDER, recipients, msg.as_string())
+    server.login(settings.EMAIL_SENDER, settings.EMAIL_PASSWORD)
+    server.sendmail(settings.EMAIL_SENDER, recipients, msg.as_string())
     server.quit()
     logger.info("Email sent successfully.")

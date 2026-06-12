@@ -16,7 +16,7 @@ def generate_signature(body_bytes: bytes, secret: str = DUMMY_SECRET) -> str:
     return "sha256=" + sig
 
 
-@patch("api.webhook.WEBHOOK_SECRET", DUMMY_SECRET)
+@patch("core.settings.settings.WEBHOOK_SECRET", DUMMY_SECRET)
 @patch("api.webhook.process_incident")
 def test_webhook_valid_payload(mock_process):
     payload_bytes = json.dumps(
@@ -40,7 +40,7 @@ def test_webhook_valid_payload(mock_process):
     assert response.status_code == 202
 
 
-@patch("api.webhook.WEBHOOK_SECRET", DUMMY_SECRET)
+@patch("core.settings.settings.WEBHOOK_SECRET", DUMMY_SECRET)
 def test_webhook_invalid_signature():
     payload_bytes = json.dumps(
         {"alerts": [{"status": "firing", "labels": {"alertname": "HighCPUUsage"}}]}
@@ -55,7 +55,7 @@ def test_webhook_invalid_signature():
     assert response.status_code == 401
 
 
-@patch("api.webhook.WEBHOOK_SECRET", DUMMY_SECRET)
+@patch("core.settings.settings.WEBHOOK_SECRET", DUMMY_SECRET)
 def test_webhook_missing_signature():
     payload_bytes = b'{"alerts":[{"status":"firing"}]}'
     headers = {"Content-Type": "application/json"}
@@ -63,7 +63,7 @@ def test_webhook_missing_signature():
     assert response.status_code == 401
 
 
-@patch("api.webhook.WEBHOOK_SECRET", DUMMY_SECRET)
+@patch("core.settings.settings.WEBHOOK_SECRET", DUMMY_SECRET)
 def test_webhook_invalid_payload():
     payload_bytes = json.dumps({"wrong_key": "data"}).encode("utf-8")
 

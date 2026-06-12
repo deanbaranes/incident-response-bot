@@ -4,7 +4,8 @@ from services.slack import send_slack_alert
 
 @patch("services.slack.requests.post")
 @patch(
-    "services.slack.SLACK_WEBHOOK_URL", "https://hooks.slack.com/services/T000/B000/XXX"
+    "core.settings.settings.SLACK_WEBHOOK_URL",
+    "https://hooks.slack.com/services/T000/B000/XXX",
 )
 def test_send_slack_alert_payload(mock_post):
     """Test Slack payload generation without screenshot."""
@@ -30,7 +31,8 @@ def test_send_slack_alert_payload(mock_post):
 
 @patch("services.slack.requests.post")
 @patch(
-    "services.slack.SLACK_WEBHOOK_URL", "https://hooks.slack.com/services/T000/B000/XXX"
+    "core.settings.settings.SLACK_WEBHOOK_URL",
+    "https://hooks.slack.com/services/T000/B000/XXX",
 )
 def test_send_slack_alert_with_screenshot(mock_post):
     """Test Slack payload generation WITH screenshot."""

@@ -5,19 +5,13 @@ import asyncio
 import logging
 import signal
 from aiokafka import AIOKafkaConsumer  # type: ignore
-from cachetools import TTLCache
+from core.db import init_db, is_incident_processed, mark_incident_processed
 from prometheus_client import start_http_server, Counter
 
 # Add project root to sys.path so we can import modules
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from config import (
-    KAFKA_BOOTSTRAP_SERVERS,
-    KAFKA_INCIDENT_TOPIC,
-    KAFKA_CONSUMER_GROUP,
-    KAFKA_DLQ_TOPIC,
-    USE_KAFKA_QUEUE,
-)
+from core.settings import settings
 from core.engine import process_incident
 from core.log_config import setup_logging, incident_id_var
 from aiokafka.producer import AIOKafkaProducer  # type: ignore
@@ -43,10 +37,7 @@ def handle_shutdown(sig, frame):
     is_running = False
 
 
-# Simple in-memory LRU cache for idempotency with 1-hour TTL
-# Prevents memory leak by capping size to 10,000 items
-MAX_CACHE_SIZE = 10000
-processed_incidents: TTLCache = TTLCache(maxsize=MAX_CACHE_SIZE, ttl=3600)
+# Persistent database for idempotency is managed via core.db
 
 
 async def send_to_dlq(producer, message_value, error_msg):
@@ -54,7 +45,7 @@ async def send_to_dlq(producer, message_value, error_msg):
         # Use Kafka Headers for DLQ exception traces as per Phase 5 spec
         headers = [("error", str(error_msg).encode("utf-8"))]
         await producer.send_and_wait(
-            topic=KAFKA_DLQ_TOPIC, value=message_value, headers=headers
+            topic=settings.KAFKA_DLQ_TOPIC, value=message_value, headers=headers
         )
         DLQ_MESSAGES.inc()
         logger.info("Sent failed message to DLQ.")
@@ -63,11 +54,13 @@ async def send_to_dlq(producer, message_value, error_msg):
 
 
 async def consume():
-    if not USE_KAFKA_QUEUE:
-        logger.error("USE_KAFKA_QUEUE is false, but consumer was started. Exiting.")
+    if not settings.USE_KAFKA_QUEUE:
+        logger.error(
+            "settings.USE_KAFKA_QUEUE is false, but consumer was started. Exiting."
+        )
         return
 
-    logger.info(f"Starting Kafka Consumer for topic: {KAFKA_INCIDENT_TOPIC}")
+    logger.info(f"Starting Kafka Consumer for topic: {settings.KAFKA_INCIDENT_TOPIC}")
 
     # Start Prometheus metrics server on port 8000 for the worker container
     try:
@@ -76,15 +69,18 @@ async def consume():
     except Exception as e:
         logger.warning(f"Could not start Prometheus metrics server: {e}")
 
+    # Initialize the local persistent database
+    await init_db()
+
     consumer = AIOKafkaConsumer(
-        KAFKA_INCIDENT_TOPIC,
-        bootstrap_servers=KAFKA_BOOTSTRAP_SERVERS,
-        group_id=KAFKA_CONSUMER_GROUP,
+        settings.KAFKA_INCIDENT_TOPIC,
+        bootstrap_servers=settings.KAFKA_BOOTSTRAP_SERVERS,
+        group_id=settings.KAFKA_CONSUMER_GROUP,
         enable_auto_commit=False,
         auto_offset_reset="earliest",
     )
 
-    dlq_producer = AIOKafkaProducer(bootstrap_servers=KAFKA_BOOTSTRAP_SERVERS)
+    dlq_producer = AIOKafkaProducer(bootstrap_servers=settings.KAFKA_BOOTSTRAP_SERVERS)
 
     await consumer.start()
     await dlq_producer.start()
@@ -112,7 +108,7 @@ async def consume():
                 if incident_id:
                     incident_id_var.set(incident_id)
 
-                if incident_id and incident_id in processed_incidents:
+                if incident_id and await is_incident_processed(incident_id):
                     logger.warning(
                         f"Incident {incident_id} already processed. Skipping (Idempotent)."
                     )
@@ -123,7 +119,7 @@ async def consume():
                 await process_incident(payload, incident_id)
 
                 if incident_id:
-                    processed_incidents[incident_id] = True
+                    await mark_incident_processed(incident_id)
 
                 # Commit only on success
                 await consumer.commit()

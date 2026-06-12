@@ -1,11 +1,11 @@
 import google.generativeai as genai
 import logging
-from config import GEMINI_API_KEY
+from core.settings import settings
 
 logger = logging.getLogger(__name__)
 
 # AI Setup
-genai.configure(api_key=GEMINI_API_KEY, transport="rest")
+genai.configure(api_key=settings.GEMINI_API_KEY, transport="rest")
 ai_model = genai.GenerativeModel("models/gemini-2.5-flash")
 
 

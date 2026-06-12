@@ -8,14 +8,10 @@ from pydantic import BaseModel, Field
 from typing import List, Dict, Any, Optional
 import json
 from aiokafka import AIOKafkaProducer  # type: ignore
+from prometheus_client import Counter
 
 from core.engine import process_incident
-from config import (
-    WEBHOOK_SECRET,
-    USE_KAFKA_QUEUE,
-    KAFKA_BOOTSTRAP_SERVERS,
-    KAFKA_INCIDENT_TOPIC,
-)
+from core.settings import settings
 
 logger = logging.getLogger(__name__)
 
@@ -23,13 +19,25 @@ router = APIRouter()
 
 producer: Optional[AIOKafkaProducer] = None
 
+# Prometheus Metrics
+WEBHOOK_ALERTS_RECEIVED = Counter(
+    "incident_bot_webhook_alerts_received_total",
+    "Total number of alerts received via webhook",
+    ["alertname", "status"],
+)
+
+WEBHOOK_KAFKA_PUBLISH_FAILURES = Counter(
+    "incident_bot_webhook_kafka_publish_failures_total",
+    "Total number of failures when publishing to Kafka",
+)
+
 
 async def init_producer():
     global producer
-    if USE_KAFKA_QUEUE:
+    if settings.USE_KAFKA_QUEUE:
         try:
             producer = AIOKafkaProducer(
-                bootstrap_servers=KAFKA_BOOTSTRAP_SERVERS,
+                bootstrap_servers=settings.KAFKA_BOOTSTRAP_SERVERS,
                 value_serializer=lambda v: json.dumps(v).encode("utf-8"),
                 acks="all",
                 enable_idempotence=True,
@@ -63,10 +71,11 @@ class WebhookPayload(BaseModel):
 
 def _verify_signature(body: bytes, header: Optional[str]) -> bool:
     """Verify Grafana HMAC-SHA256 webhook signature."""
-    if not header or not WEBHOOK_SECRET:
+    if not header or not settings.WEBHOOK_SECRET:
         return False
     expected = (
-        "sha256=" + hmac.new(WEBHOOK_SECRET.encode(), body, hashlib.sha256).hexdigest()
+        "sha256="
+        + hmac.new(settings.WEBHOOK_SECRET.encode(), body, hashlib.sha256).hexdigest()
     )
     return hmac.compare_digest(expected, header)
 
@@ -93,14 +102,22 @@ async def webhook_receiver(request: Request, background_tasks: BackgroundTasks):
     # FastAPI validates payload and returns 422 on error
     try:
         payload = WebhookPayload.model_validate_json(body)
-    except Exception:
-        logger.warning("Rejected webhook: malformed JSON or missing required fields")
+    except Exception as e:
+        logger.warning(
+            f"Rejected webhook: malformed JSON or missing required fields. Error: {e}"
+        )
         raise HTTPException(status_code=422, detail="Unprocessable Entity")
 
     incident_id = str(uuid.uuid4())
     logger.info(f"Received webhook for incident {incident_id}")
 
-    if USE_KAFKA_QUEUE and producer:
+    # Track metrics
+    for alert in payload.alerts:
+        alertname = alert.labels.get("alertname", "unknown")
+        status = alert.status or "unknown"
+        WEBHOOK_ALERTS_RECEIVED.labels(alertname=alertname, status=status).inc()
+
+    if settings.USE_KAFKA_QUEUE and producer:
         try:
             message = payload.model_dump()
             message["incident_id"] = incident_id
@@ -109,10 +126,11 @@ async def webhook_receiver(request: Request, background_tasks: BackgroundTasks):
 
             key = payload.alerts[0].labels.get("alertname", "unknown").encode("utf-8")
             await producer.send_and_wait(
-                topic=KAFKA_INCIDENT_TOPIC, value=message, key=key
+                topic=settings.KAFKA_INCIDENT_TOPIC, value=message, key=key
             )
             logger.info(f"Published incident {incident_id} to Kafka")
         except Exception as e:
+            WEBHOOK_KAFKA_PUBLISH_FAILURES.inc()
             logger.error(f"Failed to publish to Kafka: {e}")
             raise HTTPException(
                 status_code=503, detail="Service Unavailable (Broker Down)"

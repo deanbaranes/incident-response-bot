@@ -1,6 +1,5 @@
 import asyncio
 import logging
-import os
 from typing import Dict, Any
 from core.actions.base import ActionHandler
 from core.actions.registry import ActionRegistry
@@ -50,15 +49,6 @@ class SendEmailNotificationHandler(ActionHandler):
         except Exception as e:
             logger.error(f"Failed to send email report for {context.alert_name}: {e}")
             context.add_step(f"Notification: Failed to dispatch RCA report ({e}).")
-        finally:
-            if screenshot_path and os.path.exists(screenshot_path):
-                try:
-                    os.remove(screenshot_path)
-                    logger.info(f"Cleaned up screenshot: {screenshot_path}")
-                except Exception as cleanup_err:
-                    logger.error(
-                        f"Failed to clean up screenshot {screenshot_path}: {cleanup_err}"
-                    )
 
 
 class SendSlackNotificationHandler(ActionHandler):
