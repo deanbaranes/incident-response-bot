@@ -77,6 +77,14 @@ def _verify_signature(body: bytes, header: Optional[str]) -> bool:
         "sha256="
         + hmac.new(settings.WEBHOOK_SECRET.encode(), body, hashlib.sha256).hexdigest()
     )
+
+    # Try comparing without prefix just in case (Grafana native)
+    expected_no_prefix = hmac.new(
+        settings.WEBHOOK_SECRET.encode(), body, hashlib.sha256
+    ).hexdigest()
+    if hmac.compare_digest(expected_no_prefix, header):
+        return True
+
     return hmac.compare_digest(expected, header)
 
 
