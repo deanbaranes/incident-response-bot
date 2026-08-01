@@ -23,6 +23,8 @@ services:
       - KAFKA_ADVERTISED_LISTENERS=PLAINTEXT://kafka:9092
       - KAFKA_CONTROLLER_QUORUM_VOTERS=1@kafka:9093
     restart: unless-stopped
+    volumes:
+      - kafka_data:/var/lib/kafka/data
 
   worker:
     image: incident-bot:latest
@@ -32,3 +34,8 @@ services:
     restart: unless-stopped
     depends_on:
       - kafka
+    volumes:
+      - ./data:/app/data
+
+volumes:
+  kafka_data:
