@@ -27,15 +27,13 @@ async def test_create_jira_ticket_handler(dummy_context):
 
     with patch(
         "core.actions.handlers.ticketing.create_jira_ticket", new_callable=AsyncMock
-    ):
-        # We need to mock asyncio.to_thread since create_jira_ticket is synchronous
-        with patch("asyncio.to_thread", new_callable=AsyncMock) as mock_thread:
-            await handler.execute(action, dummy_context, {})
-            mock_thread.assert_called_once()
-            args, kwargs = mock_thread.call_args
-            assert "TestAlert" in kwargs["summary"]
-            assert "Test Summary" in kwargs["description"]
-            assert "Ticketing: Jira ticket created." in dummy_context.execution_steps
+    ) as mock_create:
+        await handler.execute(action, dummy_context, {})
+        mock_create.assert_called_once()
+        args, kwargs = mock_create.call_args
+        assert "TestAlert" in kwargs["summary"]
+        assert "Test Summary" in kwargs["description"]
+        assert "Ticketing: Jira ticket created." in dummy_context.execution_steps
 
 
 @pytest.mark.asyncio

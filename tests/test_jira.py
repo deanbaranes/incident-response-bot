@@ -1,22 +1,25 @@
-from unittest.mock import MagicMock, patch
+from unittest.mock import AsyncMock, patch
 
-from requests.auth import HTTPBasicAuth
+import pytest
 
 from services.jira import create_jira_ticket
 
 
-@patch("services.jira.requests.post")
+@pytest.mark.asyncio
+@patch("httpx.AsyncClient.post", new_callable=AsyncMock)
 @patch("core.settings.settings.JIRA_BASE_URL", "https://test.atlassian.net")
 @patch("core.settings.settings.JIRA_USER", "test@example.com")
 @patch("core.settings.settings.JIRA_API_TOKEN", "token123")
 @patch("core.settings.settings.JIRA_PROJECT_KEY", "TEST")
-def test_create_jira_ticket_payload(mock_post):
+async def test_create_jira_ticket_payload(mock_post):
     """Test Jira payload generation and authentication."""
+    from unittest.mock import MagicMock
+
     mock_response = MagicMock()
     mock_response.json.return_value = {"key": "TEST-1"}
     mock_post.return_value = mock_response
 
-    result = create_jira_ticket("High CPU", "CPU is at 99%")
+    result = await create_jira_ticket("High CPU", "CPU is at 99%")
     assert result is True
 
     mock_post.assert_called_once()
@@ -26,9 +29,7 @@ def test_create_jira_ticket_payload(mock_post):
     assert args[0] == "https://test.atlassian.net/rest/api/3/issue"
 
     # Assert Auth
-    assert isinstance(kwargs["auth"], HTTPBasicAuth)
-    assert kwargs["auth"].username == "test@example.com"
-    assert kwargs["auth"].password == "token123"
+    assert kwargs["auth"] == ("test@example.com", "token123")
 
     # Assert Document Format Payload
     payload = kwargs["json"]

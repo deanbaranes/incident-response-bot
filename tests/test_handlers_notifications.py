@@ -50,17 +50,15 @@ async def test_send_slack_notification_handler(dummy_context):
     handler = SendSlackNotificationHandler()
     action = {"type": "send_slack_notification"}
 
-    with patch("core.actions.handlers.notifications.send_slack_alert"):
-        with patch("asyncio.to_thread", new_callable=AsyncMock) as mock_thread:
-            await handler.execute(action, dummy_context, {})
+    with patch(
+        "core.actions.handlers.notifications.send_slack_alert", new_callable=AsyncMock
+    ) as mock_send:
+        await handler.execute(action, dummy_context, {})
 
-            mock_thread.assert_called_once()
-            args, kwargs = mock_thread.call_args
-            assert "TestAlert" in kwargs.get("title", args[1] if len(args) > 1 else "")
-            assert (
-                "Test Summary" in args[1]
-            )  # slack_message is args[1] because send_slack_alert is args[0]
-            assert any(
-                "Slack alert dispatched" in step
-                for step in dummy_context.execution_steps
-            )
+        mock_send.assert_called_once()
+        args, kwargs = mock_send.call_args
+        assert "TestAlert" in kwargs.get("title", args[1] if len(args) > 1 else "")
+        assert "Test Summary" in args[0]
+        assert any(
+            "Slack alert dispatched" in step for step in dummy_context.execution_steps
+        )

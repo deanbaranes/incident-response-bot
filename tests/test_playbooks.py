@@ -8,10 +8,8 @@ from services.playbooks import load_playbook
     new_callable=mock_open,
     read_data="name: Test Playbook\ninstruction: Fix it\nactions:\n  - type: ai_analysis",
 )
-@patch("os.path.join")
-def test_load_playbook_success(mock_join, mock_file):
-    mock_join.return_value = "/fake/dir/high_cpu_usage.yaml"
-
+def test_load_playbook_success(mock_file):
+    # We no longer mock os.path.join so it uses the real path check which passes LFI filter
     result = load_playbook("High CPU Usage")
 
     assert result is not None
