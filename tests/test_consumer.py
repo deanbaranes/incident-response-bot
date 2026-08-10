@@ -1,7 +1,9 @@
-import pytest
 import json
-from unittest.mock import patch, AsyncMock
-from workers.incident_consumer import send_to_dlq, consume
+from unittest.mock import AsyncMock, patch
+
+import pytest
+
+from workers.incident_consumer import consume, send_to_dlq
 
 
 class MockMsg:

@@ -1,5 +1,4 @@
 from pydantic import BaseModel, Field
-from typing import List
 
 
 class IncidentContext(BaseModel):
@@ -13,9 +12,9 @@ class IncidentContext(BaseModel):
     summary: str = Field(default="No summary provided.")
 
     # Store clean data instead of huge strings
-    enriched_data: List[str] = Field(default_factory=list)
-    execution_steps: List[str] = Field(default_factory=list)
-    screenshots: List[str] = Field(default_factory=list)
+    enriched_data: list[str] = Field(default_factory=list)
+    execution_steps: list[str] = Field(default_factory=list)
+    screenshots: list[str] = Field(default_factory=list)
     ai_output: str = Field(default="No AI analysis performed.")
 
     def add_enrichment(self, data: str):

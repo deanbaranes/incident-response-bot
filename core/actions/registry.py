@@ -1,12 +1,12 @@
 import logging
-from typing import Dict
+
 from core.actions.base import ActionHandler
 
 logger = logging.getLogger(__name__)
 
 
 class ActionRegistry:
-    _handlers: Dict[str, ActionHandler] = {}
+    _handlers: dict[str, ActionHandler] = {}
 
     @classmethod
     def register(cls, action_type: str, handler: ActionHandler):

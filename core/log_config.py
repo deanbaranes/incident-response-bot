@@ -1,5 +1,6 @@
-import logging
 import contextvars
+import logging
+
 from pythonjsonlogger import jsonlogger
 
 # Context variable to store the incident ID for the current request/processing flow

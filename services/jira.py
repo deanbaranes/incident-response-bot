@@ -1,8 +1,14 @@
 import logging
-import requests
-from requests.auth import HTTPBasicAuth
+
+import httpx
+from tenacity import (
+    retry,
+    retry_if_exception_type,
+    stop_after_attempt,
+    wait_exponential,
+)
+
 from core.settings import settings
-from tenacity import retry, stop_after_attempt, wait_exponential
 
 logger = logging.getLogger(__name__)
 
@@ -10,9 +16,10 @@ logger = logging.getLogger(__name__)
 @retry(
     stop=stop_after_attempt(3),
     wait=wait_exponential(multiplier=1, min=2, max=10),
+    retry=retry_if_exception_type(httpx.RequestError),
     reraise=True,
 )
-def create_jira_ticket(
+async def create_jira_ticket(
     summary: str, description: str, issue_type: str = "Task", priority: str = "High"
 ) -> bool:
     """Create an incident ticket in Jira."""
@@ -28,8 +35,8 @@ def create_jira_ticket(
         return True
 
     url = f"{settings.JIRA_BASE_URL.rstrip('/')}/rest/api/3/issue"
-    auth = HTTPBasicAuth(settings.JIRA_USER, settings.JIRA_API_TOKEN)
-    headers = {"Accept": "application/json", "Content-Type": "application/json"}
+    auth = (settings.JIRA_USER, settings.JIRA_API_TOKEN)
+    headers = {"Accept": "application/json"}
 
     payload = {
         "fields": {
@@ -49,8 +56,12 @@ def create_jira_ticket(
         }
     }
 
-    response = requests.post(url, json=payload, headers=headers, auth=auth, timeout=15)
-    response.raise_for_status()
-    issue_key = response.json().get("key")
+    async with httpx.AsyncClient() as client:
+        response = await client.post(
+            url, json=payload, headers=headers, auth=auth, timeout=15.0
+        )
+        response.raise_for_status()
+        issue_key = response.json().get("key")
+
     logger.info(f"Successfully created Jira ticket: {issue_key}")
     return True

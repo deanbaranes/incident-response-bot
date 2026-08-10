@@ -1,12 +1,14 @@
+import logging
 import os
 import smtplib
-from email.mime.text import MIMEText
-from email.mime.multipart import MIMEMultipart
-from email.mime.base import MIMEBase
 from email import encoders
-import logging
-from core.settings import settings
+from email.mime.base import MIMEBase
+from email.mime.multipart import MIMEMultipart
+from email.mime.text import MIMEText
+
 from tenacity import retry, stop_after_attempt, wait_exponential
+
+from core.settings import settings
 
 logger = logging.getLogger(__name__)
 

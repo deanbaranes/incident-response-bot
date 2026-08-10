@@ -1,11 +1,13 @@
+from unittest.mock import AsyncMock, patch
+
 import pytest
-from unittest.mock import patch, AsyncMock
-from core.context import IncidentContext
+
 from core.actions.handlers.grafana import (
     CaptureDashboardHandler,
     FetchMetricsHandler,
     GrafanaQueryHandler,
 )
+from core.context import IncidentContext
 
 
 @pytest.fixture

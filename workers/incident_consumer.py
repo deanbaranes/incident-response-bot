@@ -1,20 +1,23 @@
-import os
-import sys
-import json
 import asyncio
+import json
 import logging
+import os
 import signal
+import sys
+
 from aiokafka import AIOKafkaConsumer  # type: ignore
+from prometheus_client import Counter, start_http_server
+
 from core.db import init_db, is_incident_processed, mark_incident_processed
-from prometheus_client import start_http_server, Counter
 
 # Add project root to sys.path so we can import modules
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from core.settings import settings
-from core.engine import process_incident
-from core.log_config import setup_logging, incident_id_var
 from aiokafka.producer import AIOKafkaProducer  # type: ignore
+
+from core.engine import process_incident
+from core.log_config import incident_id_var, setup_logging
+from core.settings import settings
 
 setup_logging()
 logger = logging.getLogger("incident_consumer")

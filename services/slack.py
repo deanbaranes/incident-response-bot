@@ -1,7 +1,14 @@
 import logging
-import requests
+
+import httpx
+from tenacity import (
+    retry,
+    retry_if_exception_type,
+    stop_after_attempt,
+    wait_exponential,
+)
+
 from core.settings import settings
-from tenacity import retry, stop_after_attempt, wait_exponential
 
 logger = logging.getLogger(__name__)
 
@@ -9,9 +16,10 @@ logger = logging.getLogger(__name__)
 @retry(
     stop=stop_after_attempt(3),
     wait=wait_exponential(multiplier=1, min=2, max=10),
+    retry=retry_if_exception_type(httpx.RequestError),
     reraise=True,
 )
-def send_slack_alert(
+async def send_slack_alert(
     message: str, title: str = "Incident Alert", screenshot_path: str | None = None
 ) -> bool:
     """Send an alert to Slack via Incoming Webhook."""
@@ -26,7 +34,11 @@ def send_slack_alert(
 
     payload = {"text": f"*{title}*\n{message}"}
 
-    response = requests.post(settings.SLACK_WEBHOOK_URL, json=payload, timeout=10)
-    response.raise_for_status()
+    async with httpx.AsyncClient() as client:
+        response = await client.post(
+            settings.SLACK_WEBHOOK_URL, json=payload, timeout=10.0
+        )
+        response.raise_for_status()
+
     logger.info(f"Successfully sent Slack alert: {title}")
     return True

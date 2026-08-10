@@ -1,16 +1,17 @@
-import re
 import asyncio
 import logging
 import os
-from typing import Dict, Any
+import re
+from typing import Any
+
 from core.actions.base import ActionHandler
 from core.actions.registry import ActionRegistry
 from core.context import IncidentContext
 from core.settings import settings
 from services.grafana import (
     capture_dashboard,
-    fetch_grafana_metric,
     execute_grafana_query,
+    fetch_grafana_metric,
 )
 
 logger = logging.getLogger(__name__)
@@ -18,7 +19,7 @@ logger = logging.getLogger(__name__)
 
 class CaptureDashboardHandler(ActionHandler):
     async def execute(
-        self, action: Dict[str, Any], context: IncidentContext, alert: Dict[str, Any]
+        self, action: dict[str, Any], context: IncidentContext, alert: dict[str, Any]
     ):
         target_url = action.get("url") or settings.GRAFANA_DASHBOARD_URL
         if target_url:
@@ -39,7 +40,7 @@ class CaptureDashboardHandler(ActionHandler):
 
 class FetchMetricsHandler(ActionHandler):
     async def execute(
-        self, action: Dict[str, Any], context: IncidentContext, alert: Dict[str, Any]
+        self, action: dict[str, Any], context: IncidentContext, alert: dict[str, Any]
     ):
         target = action.get("target", "unknown metric")
         prom_query = action.get("query")
@@ -60,7 +61,7 @@ class FetchMetricsHandler(ActionHandler):
 
 class GrafanaQueryHandler(ActionHandler):
     async def execute(
-        self, action: Dict[str, Any], context: IncidentContext, alert: Dict[str, Any]
+        self, action: dict[str, Any], context: IncidentContext, alert: dict[str, Any]
     ):
         datasource_uid = action.get("datasource_uid", "")
         query = action.get("query", "")

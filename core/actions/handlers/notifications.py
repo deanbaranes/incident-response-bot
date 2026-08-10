@@ -1,6 +1,7 @@
 import asyncio
 import logging
-from typing import Dict, Any
+from typing import Any
+
 from core.actions.base import ActionHandler
 from core.actions.registry import ActionRegistry
 from core.context import IncidentContext
@@ -13,7 +14,7 @@ logger = logging.getLogger(__name__)
 
 class AiAnalysisHandler(ActionHandler):
     async def execute(
-        self, action: Dict[str, Any], context: IncidentContext, alert: Dict[str, Any]
+        self, action: dict[str, Any], context: IncidentContext, alert: dict[str, Any]
     ):
         logger.info("Running AI analysis...")
         # Since playbooks pass the whole playbook into `process_incident`, we might not have `instruction` here.
@@ -31,7 +32,7 @@ class AiAnalysisHandler(ActionHandler):
 
 class SendEmailNotificationHandler(ActionHandler):
     async def execute(
-        self, action: Dict[str, Any], context: IncidentContext, alert: Dict[str, Any]
+        self, action: dict[str, Any], context: IncidentContext, alert: dict[str, Any]
     ):
         report_body = context.format_report()
         subject = f"Incident Report: {context.alert_name}"
@@ -53,7 +54,7 @@ class SendEmailNotificationHandler(ActionHandler):
 
 class SendSlackNotificationHandler(ActionHandler):
     async def execute(
-        self, action: Dict[str, Any], context: IncidentContext, alert: Dict[str, Any]
+        self, action: dict[str, Any], context: IncidentContext, alert: dict[str, Any]
     ):
         logger.info("Sending Slack notification...")
         slack_message = (
@@ -62,8 +63,7 @@ class SendSlackNotificationHandler(ActionHandler):
             f"AI RECOMMENDATIONS & RCA:\n{context.ai_output}\n"
         )
         screenshot_path = context.screenshots[-1] if context.screenshots else None
-        await asyncio.to_thread(
-            send_slack_alert,
+        await send_slack_alert(
             slack_message,
             title=f"Incident Alert: {context.alert_name}",
             screenshot_path=screenshot_path,

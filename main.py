@@ -1,10 +1,12 @@
 import logging
-import core.settings  # noqa: F401 — imported for startup env-var validation side-effect
-from fastapi import FastAPI
 from contextlib import asynccontextmanager
-from api.webhook import router as webhook_router, init_producer, close_producer
+
+from fastapi import FastAPI
 from prometheus_fastapi_instrumentator import Instrumentator
 
+import core.settings  # noqa: F401 — imported for startup env-var validation side-effect
+from api.webhook import close_producer, init_producer
+from api.webhook import router as webhook_router
 from core.log_config import setup_logging
 
 setup_logging()

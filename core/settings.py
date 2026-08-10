@@ -1,5 +1,5 @@
 import logging
-from typing import List, Optional
+
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 logger = logging.getLogger(__name__)
@@ -22,30 +22,30 @@ class Settings(BaseSettings):
     EMAIL_RECIPIENTS: str = ""
 
     @property
-    def email_recipients_list(self) -> List[str]:
+    def email_recipients_list(self) -> list[str]:
         return [r.strip() for r in self.EMAIL_RECIPIENTS.split(",") if r.strip()]
 
     # Grafana Settings
     GRAFANA_URL: str
     GRAFANA_TOKEN: str
-    GRAFANA_USERNAME: Optional[str] = None
-    GRAFANA_DASHBOARD_URL: Optional[str] = None
+    GRAFANA_USERNAME: str | None = None
+    GRAFANA_DASHBOARD_URL: str | None = None
     GRAFANA_PROMETHEUS_DATASOURCE_ID: str = "8"
 
     # Optional Integrations
-    SLACK_WEBHOOK_URL: Optional[str] = None
+    SLACK_WEBHOOK_URL: str | None = None
 
     # Jira
-    JIRA_BASE_URL: Optional[str] = None
-    JIRA_USER: Optional[str] = None
-    JIRA_API_TOKEN: Optional[str] = None
-    JIRA_PROJECT_KEY: Optional[str] = None
+    JIRA_BASE_URL: str | None = None
+    JIRA_USER: str | None = None
+    JIRA_API_TOKEN: str | None = None
+    JIRA_PROJECT_KEY: str | None = None
 
     # Other integrations
-    GRAFANA_ONCALL_WEBHOOK_URL: Optional[str] = None
-    OPSGENIE_API_KEY: Optional[str] = None
+    GRAFANA_ONCALL_WEBHOOK_URL: str | None = None
+    OPSGENIE_API_KEY: str | None = None
     OPSGENIE_REGION: str = "us"
-    PAGERDUTY_ROUTING_KEY: Optional[str] = None
+    PAGERDUTY_ROUTING_KEY: str | None = None
 
     # Kafka Settings
     KAFKA_BOOTSTRAP_SERVERS: str = "kafka:9092"

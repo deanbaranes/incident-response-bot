@@ -1,10 +1,12 @@
+from unittest.mock import AsyncMock, patch
+
 import pytest
-from unittest.mock import patch, AsyncMock
-from core.context import IncidentContext
+
 from core.actions.handlers.notifications import (
     SendEmailNotificationHandler,
     SendSlackNotificationHandler,
 )
+from core.context import IncidentContext
 
 
 @pytest.fixture

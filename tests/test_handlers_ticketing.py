@@ -1,12 +1,14 @@
+from unittest.mock import AsyncMock, patch
+
 import pytest
-from unittest.mock import patch, AsyncMock
-from core.context import IncidentContext
+
 from core.actions.handlers.ticketing import (
     CreateJiraTicketHandler,
     CreatePagerDutyIncidentHandler,
-    SendOpsGenieAlertHandler,
     SendGrafanaOnCallAlertHandler,
+    SendOpsGenieAlertHandler,
 )
+from core.context import IncidentContext
 
 
 @pytest.fixture

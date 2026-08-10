@@ -1,6 +1,8 @@
-from unittest.mock import patch, MagicMock
-from services.jira import create_jira_ticket
+from unittest.mock import MagicMock, patch
+
 from requests.auth import HTTPBasicAuth
+
+from services.jira import create_jira_ticket
 
 
 @patch("services.jira.requests.post")

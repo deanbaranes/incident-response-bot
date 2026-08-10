@@ -1,10 +1,12 @@
+from unittest.mock import MagicMock, patch
+
 import pytest
-from unittest.mock import patch, MagicMock
 import requests
+
 from services.grafana import (
-    fetch_grafana_metric,
     capture_dashboard,
     execute_grafana_query,
+    fetch_grafana_metric,
 )
 
 

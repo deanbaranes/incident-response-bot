@@ -1,14 +1,15 @@
-import hmac
 import hashlib
+import hmac
+import json
 import logging
 import uuid
-from datetime import datetime, timezone
-from fastapi import APIRouter, BackgroundTasks, Request, HTTPException
-from pydantic import BaseModel, Field
-from typing import List, Dict, Any, Optional
-import json
+from datetime import UTC, datetime
+from typing import Any
+
 from aiokafka import AIOKafkaProducer  # type: ignore
+from fastapi import APIRouter, BackgroundTasks, HTTPException, Request
 from prometheus_client import Counter
+from pydantic import BaseModel, Field
 
 from core.engine import process_incident
 from core.settings import settings
@@ -17,7 +18,7 @@ logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
-producer: Optional[AIOKafkaProducer] = None
+producer: AIOKafkaProducer | None = None
 
 # Prometheus Metrics
 WEBHOOK_ALERTS_RECEIVED = Counter(
@@ -59,17 +60,17 @@ async def close_producer():
 
 # Schema for an individual alert
 class AlertItem(BaseModel):
-    status: Optional[str] = "firing"
-    labels: Dict[str, Any] = {}
-    annotations: Dict[str, Any] = {}
+    status: str | None = "firing"
+    labels: dict[str, Any] = {}
+    annotations: dict[str, Any] = {}
 
 
 # Schema for the incoming webhook payload from Grafana
 class WebhookPayload(BaseModel):
-    alerts: List[AlertItem] = Field(..., min_length=1)
+    alerts: list[AlertItem] = Field(..., min_length=1)
 
 
-def _verify_signature(body: bytes, header: Optional[str]) -> bool:
+def _verify_signature(body: bytes, header: str | None) -> bool:
     """Verify Grafana HMAC-SHA256 webhook signature."""
     if not header or not settings.WEBHOOK_SECRET:
         return False
@@ -129,7 +130,7 @@ async def webhook_receiver(request: Request, background_tasks: BackgroundTasks):
         try:
             message = payload.model_dump()
             message["incident_id"] = incident_id
-            message["received_at"] = datetime.now(timezone.utc).isoformat()
+            message["received_at"] = datetime.now(UTC).isoformat()
             message["source_ip"] = request.client.host if request.client else "unknown"
 
             key = payload.alerts[0].labels.get("alertname", "unknown").encode("utf-8")

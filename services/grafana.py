@@ -1,11 +1,13 @@
-import requests
 import logging
 import math
-import urllib.parse
 import re
+import urllib.parse
+
+import requests
 from playwright.sync_api import sync_playwright
-from core.settings import settings
 from tenacity import retry, stop_after_attempt, wait_exponential
+
+from core.settings import settings
 
 logger = logging.getLogger(__name__)
 

@@ -1,6 +1,7 @@
-import pytest
+from unittest.mock import AsyncMock, Mock, patch
+
 import httpx
-from unittest.mock import patch, Mock, AsyncMock
+import pytest
 
 from services.grafana_oncall import send_grafana_oncall_alert
 from services.opsgenie import send_opsgenie_alert
@@ -36,8 +37,9 @@ async def test_grafana_oncall_missing_url():
 
 @pytest.mark.asyncio
 async def test_opsgenie_success(mock_httpx_post):
-    with patch("core.settings.settings.OPSGENIE_API_KEY", "test-key"), patch(
-        "core.settings.settings.OPSGENIE_REGION", "eu"
+    with (
+        patch("core.settings.settings.OPSGENIE_API_KEY", "test-key"),
+        patch("core.settings.settings.OPSGENIE_REGION", "eu"),
     ):
         mock_resp = Mock()
         mock_resp.raise_for_status.return_value = None

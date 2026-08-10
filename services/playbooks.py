@@ -1,6 +1,8 @@
-import os
-import yaml
 import logging
+import os
+import re
+
+import yaml
 
 logger = logging.getLogger(__name__)
 
@@ -11,11 +13,17 @@ PLAYBOOKS_DIR = os.getenv(
 
 def load_playbook(alert_name: str) -> dict | None:
     """Load a playbook YAML from the local playbooks directory."""
-    file_name = alert_name.replace(" ", "_").lower() + ".yaml"
+    # Prevent path traversal by sanitizing the name
+    safe_name = re.sub(r"[^a-zA-Z0-9_-]", "_", alert_name).lower()
+    file_name = f"{safe_name}.yaml"
     path = os.path.join(PLAYBOOKS_DIR, file_name)
 
+    if not os.path.abspath(path).startswith(os.path.abspath(PLAYBOOKS_DIR)):
+        logger.error(f"Security Warning: Attempted path traversal for '{alert_name}'")
+        return None
+
     try:
-        with open(path, "r") as f:
+        with open(path) as f:
             return yaml.safe_load(f)
     except FileNotFoundError:
         logger.warning(f"No playbook found for '{alert_name}' at {path}")

@@ -1,7 +1,8 @@
-import hmac
 import hashlib
-import requests
+import hmac
 import json
+
+import requests
 
 EC2_IP = "13.60.245.177"
 WEBHOOK_SECRET = "testing_secret_key_123"

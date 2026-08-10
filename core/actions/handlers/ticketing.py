@@ -1,20 +1,20 @@
-import asyncio
 import logging
-from typing import Dict, Any
+from typing import Any
+
 from core.actions.base import ActionHandler
 from core.actions.registry import ActionRegistry
 from core.context import IncidentContext
-from services.jira import create_jira_ticket
-from services.pagerduty import create_pagerduty_incident
-from services.opsgenie import send_opsgenie_alert
 from services.grafana_oncall import send_grafana_oncall_alert
+from services.jira import create_jira_ticket
+from services.opsgenie import send_opsgenie_alert
+from services.pagerduty import create_pagerduty_incident
 
 logger = logging.getLogger(__name__)
 
 
 class CreateJiraTicketHandler(ActionHandler):
     async def execute(
-        self, action: Dict[str, Any], context: IncidentContext, alert: Dict[str, Any]
+        self, action: dict[str, Any], context: IncidentContext, alert: dict[str, Any]
     ):
         logger.info("Creating Jira ticket...")
         jira_desc = (
@@ -22,8 +22,7 @@ class CreateJiraTicketHandler(ActionHandler):
             f"LIVE SYSTEM CONTEXT:\n{chr(10).join(context.enriched_data)}\n"
             f"AI RECOMMENDATIONS & RCA:\n{context.ai_output}\n"
         )
-        await asyncio.to_thread(
-            create_jira_ticket,
+        await create_jira_ticket(
             summary=f"[{context.alert_name}] Incident Alert",
             description=jira_desc,
         )
@@ -32,7 +31,7 @@ class CreateJiraTicketHandler(ActionHandler):
 
 class CreatePagerDutyIncidentHandler(ActionHandler):
     async def execute(
-        self, action: Dict[str, Any], context: IncidentContext, alert: Dict[str, Any]
+        self, action: dict[str, Any], context: IncidentContext, alert: dict[str, Any]
     ):
         logger.info("Triggering PagerDuty...")
         severity = action.get("severity", "critical")
@@ -48,7 +47,7 @@ class CreatePagerDutyIncidentHandler(ActionHandler):
 
 class SendOpsGenieAlertHandler(ActionHandler):
     async def execute(
-        self, action: Dict[str, Any], context: IncidentContext, alert: Dict[str, Any]
+        self, action: dict[str, Any], context: IncidentContext, alert: dict[str, Any]
     ):
         logger.info("Triggering OpsGenie...")
         priority = action.get("priority", "P3")
@@ -64,7 +63,7 @@ class SendOpsGenieAlertHandler(ActionHandler):
 
 class SendGrafanaOnCallAlertHandler(ActionHandler):
     async def execute(
-        self, action: Dict[str, Any], context: IncidentContext, alert: Dict[str, Any]
+        self, action: dict[str, Any], context: IncidentContext, alert: dict[str, Any]
     ):
         logger.info("Triggering Grafana OnCall...")
         title = action.get("title", f"Incident: {context.alert_name}")

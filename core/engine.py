@@ -1,15 +1,17 @@
-import logging
 import asyncio
+import logging
 import os
-from services.playbooks import load_playbook
-from core.log_config import incident_id_var
-from core.context import IncidentContext
-from core.actions.registry import ActionRegistry
 
 # Import handlers to trigger registration
-
-from services.email import send_email_report
+import core.actions.handlers.grafana  # noqa: F401
+import core.actions.handlers.notifications  # noqa: F401
+import core.actions.handlers.ticketing  # noqa: F401
+from core.actions.registry import ActionRegistry
+from core.context import IncidentContext
+from core.log_config import incident_id_var
 from services.ai import get_ai_analysis
+from services.email import send_email_report
+from services.playbooks import load_playbook
 
 logger = logging.getLogger(__name__)
 

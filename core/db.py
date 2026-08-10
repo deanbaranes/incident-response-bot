@@ -1,8 +1,9 @@
-import aiosqlite
-import os
-import logging
-import time
 import glob
+import logging
+import os
+import time
+
+import aiosqlite
 
 logger = logging.getLogger(__name__)
 
@@ -16,12 +17,14 @@ async def init_db():
 
     try:
         async with aiosqlite.connect(DB_PATH) as db:
-            await db.execute("""
+            await db.execute(
+                """
                 CREATE TABLE IF NOT EXISTS processed_incidents (
                     incident_id TEXT PRIMARY KEY,
                     processed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                 )
-            """)
+            """
+            )
             await db.commit()
             logger.info(f"Database initialized at {DB_PATH}")
 
