@@ -30,9 +30,11 @@ The bot makes outbound requests to:
 - Grafana dashboard URLs (Playwright screenshots)
 - Google Gemini API (AI analysis)
 - Your SMTP server (email delivery)
-- GitHub API (playbook retrieval)
+- Any notification integrations you enable (Slack, Jira, PagerDuty, OpsGenie, Grafana OnCall)
 
-Dashboard URLs come from playbook YAML files or the `GRAFANA_DASHBOARD_URL` env var. Do not accept playbooks from untrusted sources — a malicious playbook could point the Playwright browser at internal network addresses (SSRF). An allow-list guard is planned for a future release.
+Playbooks are loaded from the local `playbooks/` directory. Alert names are sanitized and the resolved path is checked to stay inside that directory, which prevents path traversal.
+
+Dashboard URLs come from playbook YAML files or the `GRAFANA_DASHBOARD_URL` env var. To prevent SSRF, the Playwright browser only navigates to URLs whose hostname matches the configured `GRAFANA_URL`; any other host (including internal addresses such as the cloud metadata service) is blocked. Still, do not accept playbooks from untrusted sources.
 
 ### Prompt injection
 Alert labels and annotations are user-controlled data that is passed to the LLM as context. The bot wraps this data with clear role delimiters so the model treats it as data, not as instructions. Avoid granting the bot write access to external systems until additional output validation is in place.
@@ -44,9 +46,10 @@ Playbooks are declarative YAML — they specify named action types (`capture_das
 - All credentials are loaded from environment variables via `.env` (never committed).
 - `.gitignore` excludes `.env`, `*.png`, and `venv/`.
 - Use short-lived tokens with minimum required permissions:
-  - GitHub: read-only, scoped to the playbook repository
   - Grafana: service account with Metrics Reader role only
   - Gmail: app password (not account password)
 
 ### Rate limiting / alert deduplication
-The bot processes every webhook request independently. A misfiring alert rule in Grafana can trigger repeated AI calls and emails, incurring cost and noise. Configure Grafana's repeat interval and group_wait settings to prevent floods. A built-in deduplication layer is planned for a future release.
+In Kafka mode, the worker records each processed `incident_id` in a local SQLite database, so a message redelivered by Kafka (for example after a worker crash) is not processed twice.
+
+This does not deduplicate separate webhook requests: each request gets a new `incident_id`. A misfiring alert rule in Grafana can still trigger repeated AI calls and emails, incurring cost and noise. Configure Grafana's repeat interval and group_wait settings to prevent floods. Rate limiting of repeated alerts is planned for a future release.

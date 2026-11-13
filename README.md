@@ -183,7 +183,7 @@ services/
   grafana_oncall.py ← Grafana OnCall integration
   playbooks.py    ← Playbook retrieval from local directory
 playbooks/        ← Example YAML playbooks
-config.py         ← Env var loading with fail-fast validation
+core/settings.py  ← Env var loading with fail-fast validation
 main.py           ← FastAPI app entry point
 ```
 
@@ -197,7 +197,7 @@ main.py           ← FastAPI app entry point
 
 ## Contributing
 
-See [CONTRIBUTING.md](CONTRIBUTING.md) (coming soon). PRs welcome — especially new playbook examples and advanced AI workflows.
+See [CONTRIBUTING.md](CONTRIBUTING.md). PRs welcome — especially new playbook examples and advanced AI workflows.
 
 ## Known Limitations
 

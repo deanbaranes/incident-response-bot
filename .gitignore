@@ -8,6 +8,9 @@ ngrok.exe
 .archive/
 scratch/
 
+# Personal notes
+interview_prep.html
+
 # Database files
 data/
 *.db

@@ -1,12 +1,23 @@
+"""Send a signed test alert to a deployed bot.
+
+Usage:
+    WEBHOOK_URL=http://<host>:5000/webhook WEBHOOK_SECRET=<secret> \
+        python scripts/test_aws_webhook.py
+"""
+
 import hashlib
 import hmac
 import json
+import os
+import sys
 
 import requests
 
-EC2_IP = "13.60.245.177"
-WEBHOOK_SECRET = "testing_secret_key_123"
-URL = f"http://{EC2_IP}:5000/webhook"
+URL = os.getenv("WEBHOOK_URL")
+WEBHOOK_SECRET = os.getenv("WEBHOOK_SECRET")
+
+if not URL or not WEBHOOK_SECRET:
+    sys.exit("Set WEBHOOK_URL and WEBHOOK_SECRET environment variables first.")
 
 payload = {
     "alerts": [
