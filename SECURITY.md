@@ -4,7 +4,7 @@
 
 Please **do not** open a public GitHub issue for security vulnerabilities.
 
-Email **security@your-org.example.com** with:
+Report it privately through GitHub: open the repository's **Security** tab and click **Report a vulnerability**. Include:
 - Description of the vulnerability
 - Steps to reproduce
 - Potential impact
@@ -37,7 +37,13 @@ Playbooks are loaded from the local `playbooks/` directory. Alert names are sani
 Dashboard URLs come from playbook YAML files or the `GRAFANA_DASHBOARD_URL` env var. To prevent SSRF, the Playwright browser only navigates to URLs whose hostname matches the configured `GRAFANA_URL`; any other host (including internal addresses such as the cloud metadata service) is blocked. Still, do not accept playbooks from untrusted sources.
 
 ### Prompt injection
-Alert labels and annotations are user-controlled data that is passed to the LLM as context. The bot wraps this data with clear role delimiters so the model treats it as data, not as instructions. Avoid granting the bot write access to external systems until additional output validation is in place.
+Alert names, labels and annotations are user-controlled data that is passed to the LLM as context. Mitigations in `services/ai.py`:
+- Trusted rules are sent as the model's `system_instruction`, separate from the prompt.
+- Alert data is wrapped in `<untrusted_alert_data>` tags, and the model is instructed never to follow instructions found inside them.
+- Any copy of the wrapper tag inside alert data is removed, so the data cannot close the wrapper early.
+- Alert data is truncated to 4,000 characters.
+
+These measures reduce the risk but do not eliminate it. AI output is only used as text in reports and is never executed. Avoid granting the bot write access to external systems until additional output validation is in place. See the README section "Prompt injection protection" for details.
 
 ### Playbook safety
 Playbooks are declarative YAML — they specify named action types (`capture_dashboard_screenshot`, `fetch_metrics`, `ai_analysis`, `send_notification`). There is no `shell` or `exec` action type. Do not add one without careful review.

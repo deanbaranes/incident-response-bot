@@ -1,8 +1,4 @@
 name: HighCPUUsage
-instruction: |
-  You are an SRE responding to a high CPU alert. Analyze the metrics and screenshot,
-  identify the likely cause (runaway process, load spike, misconfigured autoscaler),
-  and recommend immediate remediation steps and a longer-term fix.
 actions:
   - type: capture_dashboard_screenshot
     url: "https://dinbaranes.grafana.net/public-dashboards/6b201773936640628436787ab837de09"
@@ -16,6 +12,10 @@ actions:
     query: "windows_system_processor_queue_length"
 
   - type: ai_analysis
+    instruction: |
+      You are an SRE responding to a high CPU alert. Analyze the metrics,
+      identify the likely cause (runaway process, load spike, misconfigured autoscaler),
+      and recommend immediate remediation steps and a longer-term fix.
 
   - type: send_slack_notification
 

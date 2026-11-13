@@ -1,8 +1,4 @@
 name: ServiceDown
-instruction: |
-  You are an SRE responding to a service-down alert. Analyze the error rate and
-  uptime metrics, determine if this is a crash, OOM, deployment rollout issue,
-  or dependency failure, and provide immediate recovery steps.
 actions:
   - type: capture_dashboard_screenshot
     url: "https://dinbaranes.grafana.net/public-dashboards/6b201773936640628436787ab837de09"
@@ -16,6 +12,10 @@ actions:
     query: "up{job='your_service'}"
 
   - type: ai_analysis
+    instruction: |
+      You are an SRE responding to a service-down alert. Analyze the error rate and
+      uptime metrics, determine if this is a crash, OOM, deployment rollout issue,
+      or dependency failure, and provide immediate recovery steps.
 
   - type: send_slack_notification
 

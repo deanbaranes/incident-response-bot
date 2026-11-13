@@ -1,12 +1,4 @@
 name: BruteForceLogin
-instruction: |
-  You are a security analyst responding to a possible brute-force or
-  credential-stuffing attack. Compare the rate of rejected requests (401/403)
-  with the total request rate. Decide whether this looks like an attack
-  (sudden spike, sustained high failure ratio) or a benign cause (expired
-  credentials after a deploy, a misconfigured client). Recommend immediate
-  containment steps (block or rate-limit source IPs, lock targeted accounts,
-  enforce MFA) and what to check next in the access logs.
 actions:
   - type: capture_dashboard_screenshot
     url: "https://dinbaranes.grafana.net/public-dashboards/6b201773936640628436787ab837de09"
@@ -20,6 +12,14 @@ actions:
     query: "sum(rate(http_requests_total[5m]))"
 
   - type: ai_analysis
+    instruction: |
+      You are a security analyst responding to a possible brute-force or
+      credential-stuffing attack. Compare the rate of rejected requests (401/403)
+      with the total request rate. Decide whether this looks like an attack
+      (sudden spike, sustained high failure ratio) or a benign cause (expired
+      credentials after a deploy, a misconfigured client). Recommend immediate
+      containment steps (block or rate-limit source IPs, lock targeted accounts,
+      enforce MFA) and what to check next in the access logs.
 
   - type: send_slack_notification
 

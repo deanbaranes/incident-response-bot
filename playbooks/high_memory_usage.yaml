@@ -1,8 +1,4 @@
 name: HighMemoryUsage
-instruction: |
-  You are an SRE responding to a high memory usage alert. Analyze the metrics,
-  identify memory leaks or unexpected growth, and recommend immediate actions
-  (e.g. restart, heap dump) and longer-term fixes.
 actions:
   - type: capture_dashboard_screenshot
 
@@ -15,6 +11,10 @@ actions:
     query: "node_memory_MemAvailable_bytes / 1024 / 1024"
 
   - type: ai_analysis
+    instruction: |
+      You are an SRE responding to a high memory usage alert. Analyze the metrics,
+      identify memory leaks or unexpected growth, and recommend immediate actions
+      (e.g. restart, heap dump) and longer-term fixes.
 
   - type: send_slack_notification
 
